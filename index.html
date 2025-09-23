@@ -1,43 +1,17 @@
 <!doctype html>
 <html>
-  <head>
-    <meta charset="utf-8">
-    <title>AR.js Minimal Test</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no"/>
-    <!-- A-Frame -->
-    <script src="https://aframe.io/releases/1.4.0/aframe.min.js"></script>
-    <!-- AR.js (A-Frame build) -->
-    <script src="https://cdn.jsdelivr.net/gh/AR-js-org/AR.js@3.3.2/aframe/build/aframe-ar.min.js"></script>
-    <style>
-      html, body { margin:0; height:100%; background:#000; }
-      #help { position:fixed; left:0; right:0; bottom:0; color:#fff; font:14px/1.4 sans-serif; 
-              background:rgba(0,0,0,0.5); padding:8px; text-align:center; }
-    </style>
-  </head>
-  <body>
-    <div id="help">If you see black, make sure the browser has camera permission and you’re on HTTPS. Then point at a printed <b>HIRO</b> marker.</div>
-
-    <a-scene
-      embedded
-      vr-mode-ui="enabled:false"
-      renderer="antialias:true"
-      arjs="sourceType: webcam; debugUIEnabled: false;">
-      
-      <!-- Single marker: built-in 'hiro' -->
-      <a-marker preset="hiro" emitevents="true">
-        <!-- Simple green box on the marker -->
-        <a-box color="#39FF14" depth="0.2" height="0.2" width="0.2" position="0 0.1 0"></a-box>
-        <a-text value="HIRO detected" position="-0.5 0 0" rotation="-90 0 0" color="#FFFFFF" width="2"></a-text>
-      </a-marker>
-
-      <a-entity camera></a-entity>
-    </a-scene>
-
-    <script>
-      // Optional: log when marker found
-      document.querySelector('a-marker').addEventListener('markerFound', () => {
-        console.log('HIRO marker found');
-      });
-    </script>
-  </body>
+<head>
+  <meta charset="utf-8">
+  <title>Camera Test</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no"/>
+  <script src="https://aframe.io/releases/1.4.0/aframe.min.js"></script>
+  <style>html,body{margin:0;height:100%;background:#000;color:#fff}</style>
+</head>
+<body>
+  <a-scene embedded>
+    <a-box position="0 1 -3" rotation="0 45 0" color="#4CC3D9"></a-box>
+    <a-entity camera></a-entity>
+  </a-scene>
+  <div style="position:fixed;left:10px;bottom:10px">If you see a blue box on black, A-Frame renders.</div>
+</body>
 </html>
