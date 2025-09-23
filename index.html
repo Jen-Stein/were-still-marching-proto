@@ -3,44 +3,46 @@
 <head>
   <meta charset="utf-8">
   <title>We're Still Marching — Thembeka Prototype</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, user-scalable=no, viewport-fit=cover"/>
 
   <!-- A-Frame + AR.js -->
   <script src="https://aframe.io/releases/1.2.0/aframe.min.js"></script>
   <script src="https://cdn.jsdelivr.net/gh/AR-js-org/AR.js@3.3.2/aframe/build/aframe-ar.min.js"></script>
 
   <style>
-    html, body { margin:0; height:100%; width:100%; overflow:hidden; }
-    body { background:#000; color:#fff; font-family: Arial, sans-serif; }
+    html, body { margin:0; padding:0; width:100%; height:100%; overflow:hidden; background:#000; }
+    body { color:#fff; font-family: Arial, sans-serif; }
 
-    /* Camera video BELOW canvas, both truly fullscreen (prevents right-side black line) */
+    /* Camera video BELOW canvas — sized with device viewport units */
     video#arjs-video, video.arjs-video, video[playsinline] {
       position: fixed !important;
-      top: 0; left: 0;
-      width: 100vw !important;
-      height: 100vh !important;
-      object-fit: cover;
-      z-index: 0;                /* below canvas */
+      inset: 0 !important;           /* top/right/bottom/left: 0 */
+      width: 100dvw !important;
+      height: 100dvh !important;
+      object-fit: cover !important;
+      z-index: 0 !important;
       background: #000;
-      transform: translateZ(0);  /* avoid sub-pixel gaps on mobile */
+      transform: translateZ(0);      /* avoid sub-pixel seams */
     }
+    /* WebGL canvas ABOVE video */
     canvas.a-canvas, .a-canvas canvas {
       position: fixed !important;
-      top: 0; left: 0;
-      width: 100vw !important;
-      height: 100vh !important;
-      z-index: 1;                /* above video */
+      inset: 0 !important;
+      width: 100dvw !important;
+      height: 100dvh !important;
+      z-index: 1 !important;
+      display: block !important;
     }
     a-scene {
       position: fixed !important;
-      top: 0; left: 0;
-      width: 100vw !important;
-      height: 100vh !important;
+      inset: 0 !important;
+      width: 100dvw !important;
+      height: 100dvh !important;
     }
 
     /* Start overlay */
     #start-screen {
-      position: fixed; inset: 0;
+      position: fixed; inset: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
       display: flex; align-items: center; justify-content: center;
       background: rgba(0,0,0,0.85); z-index: 10; flex-direction: column;
       text-align: center; padding: 24px;
@@ -56,7 +58,7 @@
 </head>
 
 <body>
-  <!-- Tap gate so mobile browsers allow audio later -->
+  <!-- Tap gate -->
   <div id="start-screen">
     <h2>We're Still Marching — Prototype</h2>
     <button id="start-button">Start the Experience</button>
@@ -70,29 +72,39 @@
     arjs="sourceType: webcam; facingMode: environment; debugUIEnabled: false; detectionMode: mono; patternRatio: 0.9"
   >
     <a-assets>
-      <!-- Your character (GIF). If it looks static later, we can swap to MP4 texture. -->
-      <img id="thembekaGif" src="assets/thembeka.gif" crossorigin="anonymous" alt=""/>
-      <audio id="thembekaAudio" src="assets/thembeka.mp3" preload="auto" playsinline webkit-playsinline></audio>
+      <!-- VIDEO TEXTURE (H.264 MP4). No autoplay; we control in JS -->
+      <video id="thembekaVideo"
+             src="assets/thembeka.mp4"
+             preload="metadata"
+             playsinline
+             webkit-playsinline
+             crossorigin="anonymous"
+             loop></video>
+
+      <!-- Voiceover -->
+      <audio id="thembekaAudio"
+             src="assets/thembeka.mp3"
+             preload="auto"
+             playsinline
+             webkit-playsinline></audio>
     </a-assets>
 
-    <!-- Single marker: HIRO (emits events) -->
-    <a-marker preset="Hiro" id="marker-thembeka" emitevents="true">
-      <!-- Obvious debug shape (shows when markerFound fires) -->
-      <a-torus-knot id="probe"
-        position="0 0.5 0"
-        radius="0.25" radius-tubular="0.06"
-        color="#FF00FF"
-        visible="false"></a-torus-knot>
+    <!-- HIRO marker -->
+    <a-marker preset="hiro" id="marker-thembeka" emitevents="true">
+      <!-- Unlit plane so it never appears black -->
+      <a-plane id="videoPlane"
+               position="0 0 0"
+               rotation="-90 0 0"
+               width="1.2" height="1.6"
+               material="src: #thembekaVideo; shader: flat"
+               visible="false"></a-plane>
 
-      <!-- Character plane; unlit so it never renders black -->
-      <a-plane
-        id="thembekaPlane"
-        rotation="-90 0 0"
-        width="1.2" height="1.6"
-        position="0 0 0"
-        material="src: #thembekaGif; shader: flat; transparent: true"
-        visible="false">
-      </a-plane>
+      <!-- Big obvious debug shape -->
+      <a-torus-knot id="probe"
+                    position="0 0.5 0"
+                    radius="0.25" radius-tubular="0.06"
+                    color="#FF00FF"
+                    visible="false"></a-torus-knot>
     </a-marker>
 
     <a-entity camera></a-entity>
@@ -101,45 +113,74 @@
   <script>
     const startBtn    = document.querySelector('#start-button');
     const startScreen = document.querySelector('#start-screen');
+    const scene       = document.querySelector('a-scene');
 
     const marker = document.querySelector('#marker-thembeka');
-    const plane  = document.querySelector('#thembekaPlane');
+    const plane  = document.querySelector('#videoPlane');
     const probe  = document.querySelector('#probe');
-    const voice  = document.querySelector('#thembekaAudio');
 
-    // Make 100% sure audio is silent until we say so
+    const vid   = document.querySelector('#thembekaVideo');
+    const voice = document.querySelector('#thembekaAudio');
+
+    // Ensure nothing plays on load
     document.addEventListener('DOMContentLoaded', () => {
+      try { vid.pause(); vid.currentTime = 0; } catch(_) {}
       try { voice.pause(); voice.currentTime = 0; } catch(_) {}
+      resizeFix();
     });
 
-    // 1) Tap-to-start: warm audio so later play() works after user gesture (iOS)
-    startBtn.addEventListener('click', async () => {
-      try {
-        await voice.play();
-        voice.pause();
-        voice.currentTime = 0;
-      } catch (_) { /* if this fails, we'll still try on markerFound */ }
-      startScreen.style.display = 'none';
-    });
+    // Device-viewport hard sizing + resize fix (kills right-side black strip)
+    function resizeFix(){
+      const vw = Math.max(window.innerWidth, document.documentElement.clientWidth || 0);
+      const vh = Math.max(window.innerHeight, document.documentElement.clientHeight || 0);
 
-    // 2) Show/hide + sync audio with character on marker events
-    marker.addEventListener('markerFound', async () => {
-      plane.setAttribute('visible', 'true');
-      probe.setAttribute('visible', 'true');
-      try {
-        await voice.play(); // starts exactly when the character appears
-      } catch (e) {
-        console.log('Audio play blocked (did you tap Start?):', e);
-      }
-    });
+      // Force inline styles (overrides any AR.js injected sizes)
+      const camVid = document.querySelector('video#arjs-video, video.arjs-video, video[playsinline]');
+      const canvas = document.querySelector('canvas.a-canvas, .a-canvas canvas');
 
-    marker.addEventListener('markerLost', () => {
-      plane.setAttribute('visible', 'false');
-      probe.setAttribute('visible', 'false');
-      voice.pause();
-      voice.currentTime = 0;
+      [camVid, canvas].forEach(el => {
+        if (!el) return;
+        el.style.position = 'fixed';
+        el.style.left = '0px';
+        el.style.top = '0px';
+        el.style.width = vw + 'px';
+        el.style.height = vh + 'px';
+      });
+    }
+    window.addEventListener('resize', resizeFix);
+    window.addEventListener('orientationchange', () => setTimeout(resizeFix, 200));
+
+    // Wait for scene fully ready before wiring AR events
+    scene.addEventListener('loaded', () => {
+      // Tap-to-start: silent prime (iOS media policy)
+      startBtn.addEventListener('click', async () => {
+        try { vid.muted = true; await vid.play(); vid.pause(); vid.currentTime = 0; } catch(_) {}
+        try { await voice.play(); voice.pause(); voice.currentTime = 0; } catch(_) {}
+        startScreen.style.display = 'none';
+        resizeFix();
+      });
+
+      // Marker events: show visual and start BOTH video+audio exactly together
+      marker.addEventListener('markerFound', async () => {
+        plane.setAttribute('visible', 'true');
+        probe.setAttribute('visible', 'true');
+        try {
+          vid.muted = false;        // allow video audio if your mp4 has audio (usually it doesn’t)
+          await vid.play();
+          await voice.play();
+        } catch(e) {
+          console.log('Playback blocked — did you tap Start?', e);
+        }
+      });
+
+      marker.addEventListener('markerLost', () => {
+        plane.setAttribute('visible', 'false');
+        probe.setAttribute('visible', 'false');
+
+        try { vid.pause();   vid.currentTime = 0; } catch(_) {}
+        try { voice.pause(); voice.currentTime = 0; } catch(_) {}
+      });
     });
   </script>
 </body>
 </html>
-
