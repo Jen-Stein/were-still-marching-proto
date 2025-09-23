@@ -2,13 +2,13 @@
 <html>
 <head>
 <meta charset="utf-8">
-<title>AR.js Hiro Detector Test</title>
+<title>HIRO Minimal Sanity</title>
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <script src="https://aframe.io/releases/1.2.0/aframe.min.js"></script>
 <script src="https://cdn.jsdelivr.net/gh/AR-js-org/AR.js@3.3.2/aframe/build/aframe-ar.min.js"></script>
 <style>
   html,body{margin:0;height:100%;width:100%;overflow:hidden;background:#000}
-  /* HARD seam killer: overscan + tiny scale */
+  /* Seam killer: overscan + tiny scale */
   video#arjs-video, video.arjs-video, video[playsinline]{
     position:fixed!important; top:0; left:-2px;
     width:calc(100dvw + 4px)!important; height:100dvh!important;
@@ -27,16 +27,17 @@
 </head>
 <body>
 <div id="status">loading…</div>
+
 <a-scene
   embedded
-  vr-mode-ui="enabled: false"
-  renderer="antialias:true; alpha:true; precision: mediump"
-  arjs="sourceType: webcam; facingMode: environment; debugUIEnabled: false; detectionMode: mono; patternRatio:0.8; trackingMethod: best; sourceWidth:1280; sourceHeight:720; displayWidth:1280; displayHeight:720">
-  <a-assets></a-assets>
+  vr-mode-ui="enabled:false"
+  renderer="antialias:true; alpha:true; precision:mediump"
+  arjs="sourceType:webcam; facingMode:environment; debugUIEnabled:true; detectionMode:mono; patternRatio:0.90">
+  <!-- ^ debugUIEnabled:true gives you sliders (threshold/blockSize) to tune detection -->
 
-  <a-marker preset="hiro" id="m" emitevents="true">
-    <!-- UNLIT, huge, obvious mesh -->
-    <a-box id="probe" position="0 0.5 0" width="0.5" height="0.5" depth="0.5"
+  <a-marker preset="hiro" id="hiro" emitevents="true">
+    <!-- Big obvious, UNLIT cube -->
+    <a-box id="probe" position="0 0.5 0" width="0.6" height="0.6" depth="0.6"
            material="color:#FF00FF; shader:flat" visible="false"></a-box>
   </a-marker>
 
@@ -44,24 +45,22 @@
 </a-scene>
 
 <script>
-const st = document.getElementById('status');
-const marker = document.getElementById('m');
-const probe = document.getElementById('probe');
+const statusEl = document.getElementById('status');
+const marker   = document.getElementById('hiro');
+const probe    = document.getElementById('probe');
 
-document.addEventListener('DOMContentLoaded',()=>{
-  // Pause any autocreated media just in case
-  setTimeout(()=>{ const v=document.querySelector('video.arjs-video'); if(v){v.playsInline=true;} }, 300);
+window.addEventListener('load', ()=>{
+  statusEl.textContent = 'Point at PRINTED HIRO… (use the debug panel if needed)';
 });
+
 marker.addEventListener('markerFound', ()=>{
   probe.setAttribute('visible','true');
-  st.textContent = 'HIRO FOUND ✅';
+  statusEl.textContent = 'HIRO FOUND ✅';
 });
+
 marker.addEventListener('markerLost', ()=>{
   probe.setAttribute('visible','false');
-  st.textContent = 'Point at printed HIRO…';
-});
-window.addEventListener('load', ()=>{
-  st.textContent = 'Point at printed HIRO…';
+  statusEl.textContent = 'Point at PRINTED HIRO…';
 });
 </script>
 </body>
