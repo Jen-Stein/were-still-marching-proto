@@ -2,98 +2,41 @@
 <html>
   <head>
     <meta charset="utf-8">
-    <title>We're Still Marching - Prototype</title>
+    <title>AR.js Minimal Test</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no"/>
-
     <!-- A-Frame -->
     <script src="https://aframe.io/releases/1.4.0/aframe.min.js"></script>
     <!-- AR.js (A-Frame build) -->
     <script src="https://cdn.jsdelivr.net/gh/AR-js-org/AR.js@3.3.2/aframe/build/aframe-ar.min.js"></script>
-
     <style>
-      html, body { margin:0; height:100%; background:#000; color:#fff; font-family: Arial, sans-serif; }
-      #start-screen {
-        position: fixed; inset: 0; display:flex; align-items:center; justify-content:center;
-        background: rgba(0,0,0,0.85); z-index: 9999; flex-direction: column; text-align: center;
-        padding: 24px;
-      }
-      #start-screen h2 { margin-bottom: 8px; }
-      #start-screen button {
-        padding: 12px 22px; font-size: 18px; border-radius: 8px; border: none; background:#ff6b6b; color:#fff; cursor: pointer;
-      }
-      #hint { margin-top: 12px; font-size: 14px; color: #ddd; max-width: 360px; }
+      html, body { margin:0; height:100%; background:#000; }
+      #help { position:fixed; left:0; right:0; bottom:0; color:#fff; font:14px/1.4 sans-serif; 
+              background:rgba(0,0,0,0.5); padding:8px; text-align:center; }
     </style>
   </head>
-
   <body>
-    <!-- Start screen (user gesture allows audio) -->
-    <div id="start-screen">
-      <h2>We're Still Marching — Prototype</h2>
-      <button id="start-button">Start the Experience</button>
-      <div id="hint">Tap “Start”, allow camera, then point your phone at the printed <b>Hiro</b> marker (intro) or <b>Kanji</b> marker (Thembeka).</div>
-    </div>
-
-    <!-- Keep one hidden HTML <img> so browsers animate the GIF reliably as texture -->
-    <img id="thembekaImg" src="assets/thembeka.gif" style="display:none" crossorigin="anonymous" alt=""/>
+    <div id="help">If you see black, make sure the browser has camera permission and you’re on HTTPS. Then point at a printed <b>HIRO</b> marker.</div>
 
     <a-scene
       embedded
-      vr-mode-ui="enabled: false"
+      vr-mode-ui="enabled:false"
       renderer="antialias:true"
-      arjs="sourceType: webcam; debugUIEnabled: false; trackingMethod: best; patternRatio: 0.9">
-
-      <a-assets>
-        <img id="thembekaGif" src="assets/thembeka.gif" crossorigin="anonymous" alt=""/>
-        <img id="introPoster"  src="assets/intro-poster.png" alt=""/>
-        <img id="exitPoster"   src="assets/exit-poster.png" alt=""/>
-        <audio id="thembekaAudio" src="assets/thembeka.mp3" preload="auto" playsinline webkit-playsinline></audio>
-      </a-assets>
-
-      <!-- Intro marker: built-in 'hiro' preset -->
-      <a-marker preset="hiro" id="marker-intro" emitevents="true">
-        <a-plane src="#introPoster" rotation="-90 0 0" width="1.0" height="0.8" position="0 0 0"></a-plane>
-      </a-marker>
-
-      <!-- Thembeka marker: built-in 'kanji' preset -->
-      <a-marker preset="kanji" id="marker-thembeka" emitevents="true">
-        <a-image id="thembekaPlane" src="#thembekaGif" rotation="-90 0 0" width="1.2" height="1.6" position="0 0 0" visible="false"></a-image>
+      arjs="sourceType: webcam; debugUIEnabled: false;">
+      
+      <!-- Single marker: built-in 'hiro' -->
+      <a-marker preset="hiro" emitevents="true">
+        <!-- Simple green box on the marker -->
+        <a-box color="#39FF14" depth="0.2" height="0.2" width="0.2" position="0 0.1 0"></a-box>
+        <a-text value="HIRO detected" position="-0.5 0 0" rotation="-90 0 0" color="#FFFFFF" width="2"></a-text>
       </a-marker>
 
       <a-entity camera></a-entity>
     </a-scene>
 
     <script>
-      const startBtn        = document.querySelector('#start-button');
-      const startScreen     = document.querySelector('#start-screen');
-      const thembekaAudio   = document.querySelector('#thembekaAudio');
-      const thembekaPlane   = document.querySelector('#thembekaPlane');
-      const markerThembeka  = document.querySelector('#marker-thembeka');
-      const markerIntro     = document.querySelector('#marker-intro');
-
-      startBtn.addEventListener('click', async () => {
-        try {
-          await thembekaAudio.play();
-          thembekaAudio.pause();
-          thembekaAudio.currentTime = 0;
-        } catch (e) {}
-        startScreen.style.display = 'none';
-      });
-
-      markerThembeka.addEventListener('markerFound', () => {
-        console.log('Thembeka marker found');
-        thembekaPlane.setAttribute('visible', 'true');
-        thembekaAudio.play().catch(()=>{ console.log('Autoplay prevented; ensure Start was tapped.'); });
-      });
-
-      markerThembeka.addEventListener('markerLost', () => {
-        console.log('Thembeka marker lost');
-        thembekaPlane.setAttribute('visible', 'false');
-        thembekaAudio.pause();
-        thembekaAudio.currentTime = 0;
-      });
-
-      markerIntro.addEventListener('markerFound', () => {
-        console.log('Intro marker found');
+      // Optional: log when marker found
+      document.querySelector('a-marker').addEventListener('markerFound', () => {
+        console.log('HIRO marker found');
       });
     </script>
   </body>
