@@ -5,16 +5,15 @@
   <title>We're Still Marching — Thembeka Prototype</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no"/>
 
-  <!-- A-Frame + AR.js (these versions work well on iOS/Safari) -->
+  <!-- A-Frame + AR.js -->
   <script src="https://aframe.io/releases/1.2.0/aframe.min.js"></script>
   <script src="https://cdn.jsdelivr.net/gh/AR-js-org/AR.js@3.3.2/aframe/build/aframe-ar.min.js"></script>
 
   <style>
-    /* Fill screen + keep camera visible behind WebGL (iOS fix) */
     html, body { margin:0; height:100%; }
     body { background:#000; color:#fff; font-family: Arial, sans-serif; }
 
-    /* AR.js injects a <video> element; make it fill the screen and sit behind canvas */
+    /* Keep camera video visible behind canvas */
     video#arjs-video, video.arjs-video, video[playsinline] {
       position: fixed !important;
       top: 0; left: 0;
@@ -22,10 +21,9 @@
       height: 100% !important;
       object-fit: cover;
       z-index: -2;
-      background: #000; /* fallback */
+      background: #000;
     }
 
-    /* Make the WebGL canvas fill the screen and sit above the video */
     canvas.a-canvas, .a-canvas canvas {
       position: fixed !important;
       top: 0; left: 0;
@@ -41,7 +39,7 @@
       height: 100% !important;
     }
 
-    /* Start overlay to get the user gesture for audio */
+    /* Start overlay */
     #start-screen {
       position: fixed; inset: 0;
       display: flex; align-items: center; justify-content: center;
@@ -59,15 +57,15 @@
 </head>
 
 <body>
-  <!-- Tap gate so mobile browsers allow audio later -->
+  <!-- Tap gate for audio permissions -->
   <div id="start-screen">
     <h2>We're Still Marching — Prototype</h2>
     <button id="start-button">Start the Experience</button>
     <div id="hint">Tap “Start”, allow camera, then point your phone at a printed <b>HIRO</b> marker.</div>
   </div>
 
-  <!-- Keep one hidden HTML <img> so browsers animate the GIF as a texture more reliably -->
-  <img id="thembekaImg" src="assets/thembeka.gif" style="display:none" crossorigin="anonymous" alt=""/>
+  <!-- Hidden GIF to keep it “warm” in some browsers -->
+  <img id="thembekaImg" src="assets/thembeka.gif" style="display:none" crossorigin="anonymous" alt="">
 
   <a-scene
     embedded
@@ -76,57 +74,62 @@
     arjs="sourceType: webcam; facingMode: environment; debugUIEnabled: false; detectionMode: mono; patternRatio: 0.9"
   >
     <a-assets>
-      <!-- Animated 2D character (GIF). If GIF appears static on your device, swap to a <video> later. -->
-      <img id="thembekaGif" src="assets/thembeka.gif" crossorigin="anonymous" alt=""> </img>
+      <img id="thembekaGif" src="assets/thembeka.gif" crossorigin="anonymous" alt="">
       <audio id="thembekaAudio" src="assets/thembeka.mp3" preload="auto" playsinline webkit-playsinline></audio>
     </a-assets>
 
-    <!-- Single marker: HIRO -->
+    <!-- SINGLE marker (no nesting, unique id) -->
     <a-marker preset="hiro" id="marker-thembeka" emitevents="true">
-      <!-- Thembeka image plane (initially hidden; shows when marker found) -->
-     <a-marker preset="hiro" id="marker-thembeka" emitevents="true">
-  <a-box id="debugBox"
-         rotation="-90 0 0"
-         position="0 0 0"
-         depth="0.01" height="1" width="1"
-         color="#FF0000"
-         visible="false"></a-box>
-</a-marker>
+      <!-- Debug box to prove tracking works -->
+      <a-box id="debugBox"
+             rotation="-90 0 0"
+             position="0 0 0"
+             depth="0.01" height="1" width="1"
+             color="#FF0000"
+             visible="false"></a-box>
 
+      <!-- Optional: show your GIF as a plane on the marker -->
+      <!--
+      <a-plane id="thembekaPlane"
+               position="0 0 0"
+               rotation="-90 0 0"
+               width="1" height="1"
+               material="src: #thembekaGif; transparent: true"
+               visible="false">
+      </a-plane>
+      -->
     </a-marker>
 
     <a-entity camera></a-entity>
   </a-scene>
 
   <script>
-  const startBtn    = document.querySelector('#start-button');
-  const startScreen = document.querySelector('#start-screen');
-  const marker      = document.querySelector('#marker-thembeka');
-  const voice       = document.querySelector('#thembekaAudio');
+    const startBtn    = document.querySelector('#start-button');
+    const startScreen = document.querySelector('#start-screen');
+    const marker      = document.querySelector('#marker-thembeka');
+    const voice       = document.querySelector('#thembekaAudio');
 
-  const debugBox    = document.querySelector('#debugBox');      // NEW
-  const plane       = document.querySelector('#thembekaPlane'); // may not exist while testing
+    const debugBox    = document.querySelector('#debugBox');
+    const plane       = document.querySelector('#thembekaPlane'); // exists if you uncomment it
 
-  startBtn.addEventListener('click', async () => {
-    try { await voice.play(); voice.pause(); voice.currentTime = 0; } catch(e){}
-    startScreen.style.display = 'none';
-  });
+    startBtn.addEventListener('click', async () => {
+      // Prime audio on a user gesture
+      try { await voice.play(); voice.pause(); voice.currentTime = 0; } catch(e){}
+      startScreen.style.display = 'none';
+    });
 
-  marker.addEventListener('markerFound', () => {
-    if (debugBox) debugBox.setAttribute('visible', 'true');     // show the red box
-    if (plane)    plane.setAttribute('visible', 'true');
-    voice.play().catch(()=>{ console.log('Autoplay blocked'); });
-  });
+    marker.addEventListener('markerFound', () => {
+      if (debugBox) debugBox.setAttribute('visible', 'true');
+      if (plane)    plane.setAttribute('visible', 'true');
+      voice.play().catch(()=>{ console.log('Autoplay blocked'); });
+    });
 
-  marker.addEventListener('markerLost', () => {
-    if (debugBox) debugBox.setAttribute('visible', 'false');
-    if (plane)    plane.setAttribute('visible', 'false');
-    voice.pause(); voice.currentTime = 0;
-  });
-</script>
+    marker.addEventListener('markerLost', () => {
+      if (debugBox) debugBox.setAttribute('visible', 'false');
+      if (plane)    plane.setAttribute('visible', 'false');
+      voice.pause(); voice.currentTime = 0;
+    });
+  </script>
 
 </body>
 </html>
-
-
-
