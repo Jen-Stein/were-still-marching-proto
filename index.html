@@ -1,134 +1,87 @@
 <!doctype html>
 <html>
 <head>
-<meta charset="utf-8">
-<title>HIRO Fix — Direct Pattern + Seam Fix</title>
-<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
-<!-- A-Frame + AR.js -->
-<script src="https://aframe.io/releases/1.2.0/aframe.min.js"></script>
-<script src="https://cdn.jsdelivr.net/gh/AR-js-org/AR.js@3.3.2/aframe/build/aframe-ar.min.js"></script>
-<style>
-  /* Fill screen, hide overflow */
-  html,body{margin:0;height:100%;width:100%;overflow:hidden;background:#000;font-family:Arial, sans-serif;color:#fff}
+  <meta charset="utf-8" />
+  <title>HIRO — Minimal Detector (seam fix)</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
 
-  /* Kill the right black strip: overscan + tiny scale */
-  video#arjs-video, video.arjs-video, video[playsinline]{
-    position:fixed!important; top:0; left:-2px;
-    width:calc(100dvw + 4px)!important; height:100dvh!important;
-    object-fit:cover!important; z-index:0!important; background:#000;
-    transform:translateZ(0) scale(1.003); transform-origin:left center;
-    pointer-events:none;
-  }
-  canvas.a-canvas, .a-canvas canvas{
-    position:fixed!important; top:0; left:-2px;
-    width:calc(100dvw + 4px)!important; height:100dvh!important;
-    z-index:1!important; display:block!important; pointer-events:none;
-    transform:translateZ(0) scale(1.003); transform-origin:left center;
-  }
-  a-scene{position:fixed!important; inset:0!important; width:100dvw!important; height:100dvh!important}
+  <!-- A-Frame + AR.js -->
+  <script src="https://aframe.io/releases/1.2.0/aframe.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/gh/AR-js-org/AR.js@3.3.2/aframe/build/aframe-ar.min.js"></script>
 
-  /* Start overlay to unlock audio */
-  #gate{position:fixed;inset:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
-        display:flex;align-items:center;justify-content:center;flex-direction:column;z-index:10;background:rgba(0,0,0,.88);padding:24px;text-align:center}
-  #gate button{padding:12px 22px;font-size:18px;border-radius:8px;border:none;background:#ff6b6b;color:#fff;cursor:pointer}
-  #status{position:fixed;left:8px;bottom:8px;z-index:5;background:rgba(0,0,0,.6);color:#0f0;font:12px/1.3 monospace;padding:6px 8px;border-radius:6px}
-</style>
+  <style>
+    html, body { margin:0; height:100%; width:100%; overflow:hidden; background:#000; font-family:system-ui, Arial, sans-serif; }
+    /* Kill right-edge line: overscan + tiny scale (strong setting) */
+    video#arjs-video, video.arjs-video, video[playsinline]{
+      position:fixed !important; top:0; left:-8px;
+      width:calc(100dvw + 16px) !important; height:100dvh !important;
+      object-fit:cover !important; z-index:0 !important; background:#000;
+      transform:translateZ(0) scale(1.012); transform-origin:left center;
+      pointer-events:none;
+    }
+    canvas.a-canvas, .a-canvas canvas{
+      position:fixed !important; top:0; left:-8px;
+      width:calc(100dvw + 16px) !important; height:100dvh !important;
+      z-index:1 !important; display:block !important; pointer-events:none;
+      transform:translateZ(0) scale(1.012); transform-origin:left center;
+    }
+    a-scene{ position:fixed !important; inset:0 !important; width:100dvw !important; height:100dvh !important; }
+    #status{ position:fixed; left:8px; bottom:8px; z-index:5; background:rgba(0,0,0,.6); color:#0f0; font:12px/1.3 monospace; padding:6px 8px; border-radius:6px; }
+  </style>
 </head>
 <body>
-<div id="gate">
-  <h2>Tap Start</h2>
-  <p>Allow camera, then point at your printed <b>HIRO</b> marker.</p>
-  <button id="start">Start</button>
-</div>
-<div id="status">loading…</div>
+  <div id="status">loading…</div>
 
-<a-scene
-  embedded
-  vr-mode-ui="enabled:false"
-  renderer="antialias:true; alpha:true; precision:mediump"
-  arjs="
-    sourceType: webcam;
-    facingMode: environment;
-    debugUIEnabled: false;
-    detectionMode: mono;
-    trackingMethod: best;
-    patternRatio: 0.80
-  "
->
-  <a-assets>
-    <!-- Your audio (starts exactly when marker appears) -->
-    <audio id="voice" src="assets/thembeka.mp3" preload="auto" playsinline webkit-playsinline></audio>
-
-    <!-- OPTIONAL: if you want your GIF/VIDEO character, add it here and map to a plane later -->
-    <!-- <img id="charGif" src="assets/thembeka.gif" crossorigin="anonymous" alt=""> -->
-  </a-assets>
-
-  <!-- IMPORTANT: use direct HIRO pattern (no preset) -->
-  <a-marker
-    type="pattern"
-    id="hiroMarker"
-    emitevents="true"
-    url="https://raw.githubusercontent.com/AR-js-org/AR.js/master/three.js/examples/marker-training/examples/pattern-files/pattern-kanji.patt"
+  <a-scene
+    embedded
+    vr-mode-ui="enabled:false"
+    renderer="antialias:true; alpha:true; precision:mediump"
+    arjs="
+      sourceType: webcam;
+      facingMode: environment;
+      detectionMode: mono;
+      patternRatio: 0.50;          /* default works best */
+      debugUIEnabled: false;
+      sourceWidth: 640; sourceHeight: 480;  /* keep it light = more reliable */
+      displayWidth: 640; displayHeight: 480
+    "
   >
-    <!-- Big obvious unlit cube so you KNOW it’s working -->
-    <a-box id="probe"
-           position="0 0.5 0"
-           depth="0.5" height="0.5" width="0.5"
-           material="color:#FF00FF; shader:flat"
-           visible="false"></a-box>
+    <!-- DIRECT HIRO pattern (no preset) -->
+    <a-marker
+      id="marker"
+      type="pattern"
+      emitevents="true"
+      minConfidence="0.1"
+      url="https://raw.githubusercontent.com/jeromeetienne/AR.js/master/three.js/examples/marker-training/examples/pattern-files/pattern-hiro.patt"
+    >
+      <!-- Huge, unlit magenta cube -->
+      <a-box id="probe"
+             position="0 0.5 0"
+             width="0.7" height="0.7" depth="0.7"
+             material="color:#FF00FF; shader:flat"
+             visible="false"></a-box>
+    </a-marker>
 
-    <!-- If you want your character plane, uncomment and set src above
-    <a-plane id="char"
-             rotation="-90 0 0"
-             width="1.2" height="1.6"
-             position="0 0 0"
-             material="src:#charGif; shader:flat; transparent:true"
-             visible="false"></a-plane>
-    -->
-  </a-marker>
+    <a-entity camera></a-entity>
+  </a-scene>
 
-  <a-entity camera></a-entity>
-</a-scene>
+  <script>
+    const statusEl = document.getElementById('status');
+    const marker   = document.getElementById('marker');
+    const probe    = document.getElementById('probe');
 
-<script>
-const $ = s => document.querySelector(s);
-const gate   = $('#gate');
-const start  = $('#start');
-const status = $('#status');
-const marker = $('#hiroMarker');
-const probe  = $('#probe');
-const voice  = $('#voice');
-// const char   = $('#char'); // if you use the character plane
+    window.addEventListener('load', () => {
+      statusEl.textContent = 'Point at your PRINTED HIRO (fill 1/3 of screen, steady)…';
+    });
 
-// Keep audio silent on load
-document.addEventListener('DOMContentLoaded', ()=>{
-  try{ voice.pause(); voice.currentTime = 0; }catch(_){}
-  status.textContent = 'Tap Start…';
-});
-
-// Start button: prime audio (required by iOS), do NOT play yet
-start.addEventListener('click', async ()=>{
-  try{ await voice.play(); voice.pause(); voice.currentTime = 0; }catch(_){}
-  gate.style.display = 'none';
-  status.textContent = 'Point at printed HIRO…';
-});
-
-// When marker is found: show cube (and character if enabled) + start audio
-marker.addEventListener('markerFound', async ()=>{
-  probe.setAttribute('visible','true');
-  // if (char) char.setAttribute('visible','true');
-  try{ await voice.play(); }catch(e){ console.log('Audio blocked — tap Start first', e); }
-  status.textContent = 'HIRO FOUND ✅';
-});
-
-// When marker is lost: hide & stop audio
-marker.addEventListener('markerLost', ()=>{
-  probe.setAttribute('visible','false');
-  // if (char) char.setAttribute('visible','false');
-  try{ voice.pause(); voice.currentTime = 0; }catch(_){}
-  status.textContent = 'Point at printed HIRO…';
-});
-</script>
+    marker.addEventListener('markerFound', () => {
+      probe.setAttribute('visible', 'true');
+      statusEl.textContent = 'HIRO FOUND ✅';
+    });
+    marker.addEventListener('markerLost', () => {
+      probe.setAttribute('visible', 'false');
+      statusEl.textContent = 'Point at your PRINTED HIRO…';
+    });
+  </script>
 </body>
 </html>
-
