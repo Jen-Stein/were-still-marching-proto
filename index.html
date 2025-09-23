@@ -13,25 +13,23 @@
     html, body { margin:0; height:100%; }
     body { background:#000; color:#fff; font-family: Arial, sans-serif; }
 
-    /* Keep camera video visible behind canvas */
+    /* Keep camera video visible behind canvas (canvas ABOVE video) */
     video#arjs-video, video.arjs-video, video[playsinline] {
       position: fixed !important;
       top: 0; left: 0;
       width: 100% !important;
       height: 100% !important;
       object-fit: cover;
-      z-index: -2;
+      z-index: 0;          /* below canvas */
       background: #000;
     }
-
     canvas.a-canvas, .a-canvas canvas {
       position: fixed !important;
       top: 0; left: 0;
       width: 100% !important;
       height: 100% !important;
-      z-index: -1;
+      z-index: 1;          /* above video */
     }
-
     a-scene {
       position: fixed !important;
       top: 0; left: 0;
@@ -39,7 +37,7 @@
       height: 100% !important;
     }
 
-    /* Start overlay */
+    /* Start overlay to capture user gesture */
     #start-screen {
       position: fixed; inset: 0;
       display: flex; align-items: center; justify-content: center;
@@ -57,15 +55,12 @@
 </head>
 
 <body>
-  <!-- Tap gate for audio permissions -->
+  <!-- Tap gate so mobile browsers allow audio/video later -->
   <div id="start-screen">
     <h2>We're Still Marching — Prototype</h2>
     <button id="start-button">Start the Experience</button>
     <div id="hint">Tap “Start”, allow camera, then point your phone at a printed <b>HIRO</b> marker.</div>
   </div>
-
-  <!-- Hidden GIF to keep it “warm” in some browsers -->
-  <img id="thembekaImg" src="assets/thembeka.gif" style="display:none" crossorigin="anonymous" alt="">
 
   <a-scene
     embedded
@@ -74,60 +69,96 @@
     arjs="sourceType: webcam; facingMode: environment; debugUIEnabled: false; detectionMode: mono; patternRatio: 0.9"
   >
     <a-assets>
-      <img id="thembekaGif" src="assets/thembeka.gif" crossorigin="anonymous" alt="">
-      <audio id="thembekaAudio" src="assets/thembeka.mp3" preload="auto" playsinline webkit-playsinline></audio>
+      <!-- VIDEO TEXTURE (use MP4/H.264) -->
+      <video id="thembekaVideo"
+             src="assets/thembeka.mp4"
+             preload="auto"
+             playsinline
+             webkit-playsinline
+             crossorigin="anonymous"
+             muted
+             loop></video>
+
+      <!-- Voiceover -->
+      <audio id="thembekaAudio"
+             src="assets/thembeka.mp3"
+             preload="auto"
+             playsinline
+             webkit-playsinline></audio>
     </a-assets>
 
-    <!-- SINGLE marker (no nesting, unique id) -->
+    <!-- Single marker -->
     <a-marker preset="hiro" id="marker-thembeka" emitevents="true">
-      <!-- Debug box to prove tracking works -->
-      <a-box id="debugBox"
-             rotation="-90 0 0"
-             position="0 0 0"
-             depth="0.01" height="1" width="1"
-             color="#FF0000"
-             visible="false"></a-box>
-
-      <!-- Optional: show your GIF as a plane on the marker -->
-      <!--
-      <a-plane id="thembekaPlane"
+      <!-- Show the video on this plane (flat = unlit so it’s never black) -->
+      <a-plane id="videoPlane"
                position="0 0 0"
                rotation="-90 0 0"
                width="1" height="1"
-               material="src: #thembekaGif; transparent: true"
-               visible="false">
-      </a-plane>
-      -->
+               material="src: #thembekaVideo; shader: flat"
+               visible="false"></a-plane>
+
+      <!-- Optional: obvious debug shape to confirm tracking -->
+      <a-torus-knot id="probe"
+                    position="0 0.5 0"
+                    radius="0.25" radius-tubular="0.06"
+                    color="#FF00FF"
+                    visible="false"></a-torus-knot>
     </a-marker>
 
     <a-entity camera></a-entity>
   </a-scene>
 
   <script>
-    const startBtn    = document.querySelector('#start-button');
-    const startScreen = document.querySelector('#start-screen');
-    const marker      = document.querySelector('#marker-thembeka');
-    const voice       = document.querySelector('#thembekaAudio');
+    const startBtn     = document.querySelector('#start-button');
+    const startScreen  = document.querySelector('#start-screen');
+    const marker       = document.querySelector('#marker-thembeka');
 
-    const debugBox    = document.querySelector('#debugBox');
-    const plane       = document.querySelector('#thembekaPlane'); // exists if you uncomment it
+    const vid          = document.querySelector('#thembekaVideo');
+    const voice        = document.querySelector('#thembekaAudio');
 
+    const plane        = document.querySelector('#videoPlane');
+    const probe        = document.querySelector('#probe');
+
+    // Prime media on user gesture (iOS requirement)
     startBtn.addEventListener('click', async () => {
-      // Prime audio on a user gesture
-      try { await voice.play(); voice.pause(); voice.currentTime = 0; } catch(e){}
+      try {
+        // Prime VIDEO: play then immediately pause to unlock with sound
+        await vid.play();
+        vid.pause();
+        vid.currentTime = 0;
+        vid.muted = false;   // unmute after the gesture
+      } catch(e) {
+        console.log('Video prime failed', e);
+      }
+
+      try {
+        // Prime AUDIO similarly
+        await voice.play();
+        voice.pause();
+        voice.currentTime = 0;
+      } catch(e) {
+        console.log('Audio prime failed', e);
+      }
+
       startScreen.style.display = 'none';
     });
 
-    marker.addEventListener('markerFound', () => {
-      if (debugBox) debugBox.setAttribute('visible', 'true');
-      if (plane)    plane.setAttribute('visible', 'true');
-      voice.play().catch(()=>{ console.log('Autoplay blocked'); });
+    // When marker is found, show and play
+    marker.addEventListener('markerFound', async () => {
+      if (plane) plane.setAttribute('visible', 'true');
+      if (probe) probe.setAttribute('visible', 'true');
+
+      try { await vid.play(); } catch(e){ console.log('Video play blocked', e); }
+      try { await voice.play(); } catch(e){ console.log('Audio play blocked', e); }
     });
 
+    // When marker is lost, hide and reset
     marker.addEventListener('markerLost', () => {
-      if (debugBox) debugBox.setAttribute('visible', 'false');
-      if (plane)    plane.setAttribute('visible', 'false');
-      voice.pause(); voice.currentTime = 0;
+      if (plane) plane.setAttribute('visible', 'false');
+      if (probe) probe.setAttribute('visible', 'false');
+
+      vid.pause();    vid.currentTime = 0;
+      voice.pause();  voice.currentTime = 0;
     });
   </script>
 
