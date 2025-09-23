@@ -84,14 +84,15 @@
     <!-- Single marker: HIRO -->
     <a-marker preset="hiro" id="marker-thembeka" emitevents="true">
       <!-- Thembeka image plane (initially hidden; shows when marker found) -->
-      <a-image
-        id="thembekaPlane"
-        src="#thembekaGif"
-        rotation="-90 0 0"
-        width="1.2" height="1.6"
-        position="0 0 0"
-        visible="false">
-      </a-image>
+     <a-marker preset="hiro" id="marker-thembeka" emitevents="true">
+  <a-box id="debugBox"
+         rotation="-90 0 0"
+         position="0 0 0"
+         depth="0.01" height="1" width="1"
+         color="#FF0000"
+         visible="false"></a-box>
+</a-marker>
+
     </a-marker>
 
     <a-entity camera></a-entity>
@@ -128,3 +129,4 @@
   </script>
 </body>
 </html>
+
