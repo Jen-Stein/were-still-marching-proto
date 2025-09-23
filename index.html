@@ -99,34 +99,32 @@
   </a-scene>
 
   <script>
-    const startBtn       = document.querySelector('#start-button');
-    const startScreen    = document.querySelector('#start-screen');
-    const marker         = document.querySelector('#marker-thembeka');
-    const plane          = document.querySelector('#thembekaPlane');
-    const voice          = document.querySelector('#thembekaAudio');
+  const startBtn    = document.querySelector('#start-button');
+  const startScreen = document.querySelector('#start-screen');
+  const marker      = document.querySelector('#marker-thembeka');
+  const voice       = document.querySelector('#thembekaAudio');
 
-    // 1) Tap-to-start: warm audio so later play() works after user gesture
-    startBtn.addEventListener('click', async () => {
-      try {
-        await voice.play();
-        voice.pause();
-        voice.currentTime = 0;
-      } catch (e) { /* some browsers won’t play until markerFound; that’s fine */ }
-      startScreen.style.display = 'none';
-    });
+  const debugBox    = document.querySelector('#debugBox');      // NEW
+  const plane       = document.querySelector('#thembekaPlane'); // may not exist while testing
 
-    // 2) Show/hide plane + play/pause audio on marker events
-    marker.addEventListener('markerFound', () => {
-      plane.setAttribute('visible', 'true');
-      voice.play().catch(() => { console.log('Autoplay prevented; ensure Start was tapped.'); });
-    });
+  startBtn.addEventListener('click', async () => {
+    try { await voice.play(); voice.pause(); voice.currentTime = 0; } catch(e){}
+    startScreen.style.display = 'none';
+  });
 
-    marker.addEventListener('markerLost', () => {
-      plane.setAttribute('visible', 'false');
-      voice.pause();
-      voice.currentTime = 0;
-    });
-  </script>
+  marker.addEventListener('markerFound', () => {
+    if (debugBox) debugBox.setAttribute('visible', 'true');     // show the red box
+    if (plane)    plane.setAttribute('visible', 'true');
+    voice.play().catch(()=>{ console.log('Autoplay blocked'); });
+  });
+
+  marker.addEventListener('markerLost', () => {
+    if (debugBox) debugBox.setAttribute('visible', 'false');
+    if (plane)    plane.setAttribute('visible', 'false');
+    voice.pause(); voice.currentTime = 0;
+  });
+</script>
+
 </body>
 </html>
 
