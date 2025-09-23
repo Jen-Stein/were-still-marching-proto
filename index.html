@@ -13,14 +13,14 @@
     html, body { margin:0; height:100%; }
     body { background:#000; color:#fff; font-family: Arial, sans-serif; }
 
-    /* Keep camera video visible behind canvas (canvas ABOVE video) */
+    /* Camera video BELOW canvas */
     video#arjs-video, video.arjs-video, video[playsinline] {
       position: fixed !important;
       top: 0; left: 0;
       width: 100% !important;
       height: 100% !important;
       object-fit: cover;
-      z-index: 0;          /* below canvas */
+      z-index: 0;
       background: #000;
     }
     canvas.a-canvas, .a-canvas canvas {
@@ -28,7 +28,7 @@
       top: 0; left: 0;
       width: 100% !important;
       height: 100% !important;
-      z-index: 1;          /* above video */
+      z-index: 1;
     }
     a-scene {
       position: fixed !important;
@@ -37,7 +37,7 @@
       height: 100% !important;
     }
 
-    /* Start overlay to capture user gesture */
+    /* Start overlay */
     #start-screen {
       position: fixed; inset: 0;
       display: flex; align-items: center; justify-content: center;
@@ -55,7 +55,7 @@
 </head>
 
 <body>
-  <!-- Tap gate so mobile browsers allow audio/video later -->
+  <!-- Tap gate -->
   <div id="start-screen">
     <h2>We're Still Marching — Prototype</h2>
     <button id="start-button">Start the Experience</button>
@@ -69,27 +69,18 @@
     arjs="sourceType: webcam; facingMode: environment; debugUIEnabled: false; detectionMode: mono; patternRatio: 0.9"
   >
     <a-assets>
-      <!-- VIDEO TEXTURE (use MP4/H.264) -->
+      <!-- VIDEO: no autoplay, no 'muted' attribute; we'll control it in JS -->
       <video id="thembekaVideo"
              src="assets/thembeka.mp4"
-             preload="auto"
+             preload="metadata"
              playsinline
              webkit-playsinline
              crossorigin="anonymous"
-             muted
              loop></video>
-
-      <!-- Voiceover -->
-      <audio id="thembekaAudio"
-             src="assets/thembeka.mp3"
-             preload="auto"
-             playsinline
-             webkit-playsinline></audio>
     </a-assets>
 
-    <!-- Single marker -->
     <a-marker preset="hiro" id="marker-thembeka" emitevents="true">
-      <!-- Show the video on this plane (flat = unlit so it’s never black) -->
+      <!-- Unlit plane so it always shows -->
       <a-plane id="videoPlane"
                position="0 0 0"
                rotation="-90 0 0"
@@ -97,7 +88,7 @@
                material="src: #thembekaVideo; shader: flat"
                visible="false"></a-plane>
 
-      <!-- Optional: obvious debug shape to confirm tracking -->
+      <!-- Obvious debug shape (optional) -->
       <a-torus-knot id="probe"
                     position="0 0.5 0"
                     radius="0.25" radius-tubular="0.06"
@@ -109,56 +100,51 @@
   </a-scene>
 
   <script>
-    const startBtn     = document.querySelector('#start-button');
-    const startScreen  = document.querySelector('#start-screen');
-    const marker       = document.querySelector('#marker-thembeka');
+    const startBtn    = document.querySelector('#start-button');
+    const startScreen = document.querySelector('#start-screen');
+    const marker      = document.querySelector('#marker-thembeka');
 
-    const vid          = document.querySelector('#thembekaVideo');
-    const voice        = document.querySelector('#thembekaAudio');
+    const vid   = document.querySelector('#thembekaVideo');
+    const plane = document.querySelector('#videoPlane');
+    const probe = document.querySelector('#probe');
 
-    const plane        = document.querySelector('#videoPlane');
-    const probe        = document.querySelector('#probe');
+    // Make absolutely sure nothing plays on load
+    document.addEventListener('DOMContentLoaded', () => {
+      try { vid.pause(); vid.currentTime = 0; } catch(e){}
+    });
 
-    // Prime media on user gesture (iOS requirement)
+    // Prime silently on user gesture (iOS requires a play in a gesture)
     startBtn.addEventListener('click', async () => {
       try {
-        // Prime VIDEO: play then immediately pause to unlock with sound
-        await vid.play();
-        vid.pause();
-        vid.currentTime = 0;
-        vid.muted = false;   // unmute after the gesture
-      } catch(e) {
-        console.log('Video prime failed', e);
+        vid.muted = true;        // force silent prime
+        await vid.play();        // start (silent)
+        vid.pause();             // immediately pause
+        vid.currentTime = 0;     // rewind
+      } catch (e) {
+        console.log('Silent prime failed (will still play on marker):', e);
       }
-
-      try {
-        // Prime AUDIO similarly
-        await voice.play();
-        voice.pause();
-        voice.currentTime = 0;
-      } catch(e) {
-        console.log('Audio prime failed', e);
-      }
-
       startScreen.style.display = 'none';
     });
 
-    // When marker is found, show and play
     marker.addEventListener('markerFound', async () => {
       if (plane) plane.setAttribute('visible', 'true');
       if (probe) probe.setAttribute('visible', 'true');
-
-      try { await vid.play(); } catch(e){ console.log('Video play blocked', e); }
-      try { await voice.play(); } catch(e){ console.log('Audio play blocked', e); }
+      try {
+        vid.muted = false;       // allow sound now that marker is found
+        await vid.play();        // start playback with audio
+      } catch (e) {
+        console.log('Video play blocked:', e);
+      }
     });
 
-    // When marker is lost, hide and reset
     marker.addEventListener('markerLost', () => {
       if (plane) plane.setAttribute('visible', 'false');
       if (probe) probe.setAttribute('visible', 'false');
-
-      vid.pause();    vid.currentTime = 0;
-      voice.pause();  voice.currentTime = 0;
+      try {
+        vid.pause();
+        vid.currentTime = 0;
+        vid.muted = true;        // re-mute so it can’t leak on re-entry
+      } catch(e){}
     });
   </script>
 
