@@ -1,130 +1,79 @@
 <!doctype html>
 <html>
-<head>
-  <meta charset="utf-8">
-  <title>We're Still Marching — Thembeka Prototype</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no"/>
+  <head>
+    <meta charset="utf-8">
+    <title>We're Still Marching — Minimal Marker Test</title>
+    <!-- iOS safe area + cover -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover"/>
 
-  <!-- A-Frame + AR.js (these versions work well on iOS/Safari) -->
-  <script src="https://aframe.io/releases/1.2.0/aframe.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/gh/AR-js-org/AR.js@3.3.2/aframe/build/aframe-ar.min.js"></script>
+    <!-- A-Frame -->
+    <script src="https://aframe.io/releases/1.4.0/aframe.min.js"></script>
+    <!-- AR.js (A-Frame build) -->
+    <script src="https://cdn.jsdelivr.net/gh/AR-js-org/AR.js@3.3.2/aframe/build/aframe-ar.min.js"></script>
 
-  <style>
-    /* Fill screen + keep camera visible behind WebGL (iOS fix) */
-    html, body { margin:0; height:100%; }
-    body { background:#000; color:#fff; font-family: Arial, sans-serif; }
+    <style>
+      :root{
+        /* iOS safe areas */
+        --s-top: env(safe-area-inset-top);
+        --s-right: env(safe-area-inset-right);
+        --s-bottom: env(safe-area-inset-bottom);
+        --s-left: env(safe-area-inset-left);
+      }
+      html, body {
+        margin: 0; height: 100%;
+        background: #000; color: #fff; font-family: Arial, sans-serif;
+      }
+      body { padding: var(--s-top) var(--s-right) var(--s-bottom) var(--s-left); }
 
-    /* AR.js injects a <video> element; make it fill the screen and sit behind canvas */
-    video#arjs-video, video.arjs-video, video[playsinline] {
-      position: fixed !important;
-      top: 0; left: 0;
-      width: 100% !important;
-      height: 100% !important;
-      object-fit: cover;
-      z-index: -2;
-      background: #000; /* fallback */
-    }
+      /* 🔧 Make AR.js camera video & canvas fill the screen on iPhone */
+      video#arjs-video, video.arjs-video, video[playsinline],
+      canvas.a-canvas, .a-canvas canvas, a-scene {
+        position: fixed !important;
+        top: 0; left: 0;
+        width: 100% !important; height: 100% !important;
+        object-fit: cover;
+      }
 
-    /* Make the WebGL canvas fill the screen and sit above the video */
-    canvas.a-canvas, .a-canvas canvas {
-      position: fixed !important;
-      top: 0; left: 0;
-      width: 100% !important;
-      height: 100% !important;
-      z-index: -1;
-    }
+      /* Minimal start overlay so Safari gives us camera permission cleanly */
+      #start {
+        position: fixed; inset: 0;
+        display: flex; align-items: center; justify-content: center;
+        background: rgba(0,0,0,0.85); color: #fff; z-index: 9999;
+        flex-direction: column; gap: 12px; text-align: center; padding: 24px;
+      }
+      #start button {
+        padding: 12px 22px; font-size: 18px; border-radius: 8px;
+        border: none; background:#ff6b6b; color:#fff; cursor: pointer;
+      }
+    </style>
+  </head>
 
-    a-scene {
-      position: fixed !important;
-      top: 0; left: 0;
-      width: 100% !important;
-      height: 100% !important;
-    }
+  <body>
+    <div id="start">
+      <h2>We're Still Marching — Camera Test</h2>
+      <button id="go">Start</button>
+      <div>Tap Start, allow camera, then point at the printed <b>HIRO</b> marker.</div>
+    </div>
 
-    /* Start overlay to get the user gesture for audio */
-    #start-screen {
-      position: fixed; inset: 0;
-      display: flex; align-items: center; justify-content: center;
-      background: rgba(0,0,0,0.85); z-index: 10; flex-direction: column;
-      text-align: center; padding: 24px;
-    }
-    #start-screen h2 { margin: 0 0 8px; }
-    #start-screen button {
-      padding: 12px 22px; font-size: 18px;
-      border-radius: 8px; border: none; background:#ff6b6b; color:#fff;
-      cursor: pointer;
-    }
-    #hint { margin-top: 12px; font-size: 14px; color: #ddd; max-width: 360px; }
-  </style>
-</head>
+    <a-scene
+      embedded
+      vr-mode-ui="enabled: false"
+      renderer="antialias:true"
+      arjs="sourceType: webcam; debugUIEnabled: false; trackingMethod: best; patternRatio: 0.9">
 
-<body>
-  <!-- Tap gate so mobile browsers allow audio later -->
-  <div id="start-screen">
-    <h2>We're Still Marching — Prototype</h2>
-    <button id="start-button">Start the Experience</button>
-    <div id="hint">Tap “Start”, allow camera, then point your phone at a printed <b>HIRO</b> marker.</div>
-  </div>
+      <!-- HIRO marker with a simple box to prove tracking -->
+      <a-marker preset="hiro" emitevents="true">
+        <a-box color="#FF6B6B" depth="0.5" height="0.5" width="0.5" position="0 0.25 0" rotation="-90 0 0"></a-box>
+      </a-marker>
 
-  <!-- Keep one hidden HTML <img> so browsers animate the GIF as a texture more reliably -->
-  <img id="thembekaImg" src="assets/thembeka.gif" style="display:none" crossorigin="anonymous" alt=""/>
+      <a-entity camera></a-entity>
+    </a-scene>
 
-  <a-scene
-    embedded
-    vr-mode-ui="enabled: false"
-    renderer="antialias:true; alpha:true; precision: mediump"
-    arjs="sourceType: webcam; facingMode: environment; debugUIEnabled: false; detectionMode: mono; patternRatio: 0.9"
-  >
-    <a-assets>
-      <!-- Animated 2D character (GIF). If GIF appears static on your device, swap to a <video> later. -->
-      <img id="thembekaGif" src="assets/thembeka.gif" crossorigin="anonymous" alt=""/>
-      <audio id="thembekaAudio" src="assets/thembeka.mp3" preload="auto" playsinline webkit-playsinline></audio>
-    </a-assets>
-
-    <!-- Single marker: HIRO -->
-    <a-marker preset="hiro" id="marker-thembeka" emitevents="true">
-      <!-- Thembeka image plane (initially hidden; shows when marker found) -->
-      <a-image
-        id="thembekaPlane"
-        src="#thembekaGif"
-        rotation="-90 0 0"
-        width="1.2" height="1.6"
-        position="0 0 0"
-        visible="false">
-      </a-image>
-    </a-marker>
-
-    <a-entity camera></a-entity>
-  </a-scene>
-
-  <script>
-    const startBtn       = document.querySelector('#start-button');
-    const startScreen    = document.querySelector('#start-screen');
-    const marker         = document.querySelector('#marker-thembeka');
-    const plane          = document.querySelector('#thembekaPlane');
-    const voice          = document.querySelector('#thembekaAudio');
-
-    // 1) Tap-to-start: warm audio so later play() works after user gesture
-    startBtn.addEventListener('click', async () => {
-      try {
-        await voice.play();
-        voice.pause();
-        voice.currentTime = 0;
-      } catch (e) { /* some browsers won’t play until markerFound; that’s fine */ }
-      startScreen.style.display = 'none';
-    });
-
-    // 2) Show/hide plane + play/pause audio on marker events
-    marker.addEventListener('markerFound', () => {
-      plane.setAttribute('visible', 'true');
-      voice.play().catch(() => { console.log('Autoplay prevented; ensure Start was tapped.'); });
-    });
-
-    marker.addEventListener('markerLost', () => {
-      plane.setAttribute('visible', 'false');
-      voice.pause();
-      voice.currentTime = 0;
-    });
-  </script>
-</body>
+    <script>
+      // Simple gate so user taps first (Safari likes a gesture before camera/audio)
+      document.getElementById('go').addEventListener('click', () => {
+        document.getElementById('start').style.display = 'none';
+      });
+    </script>
+  </body>
 </html>
