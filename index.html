@@ -1,152 +1,121 @@
 <!doctype html>
 <html>
-<head>
-  <meta charset="utf-8">
-  <title>We're Still Marching — Thembeka Prototype</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no"/>
+  <head>
+    <meta charset="utf-8">
+    <title>We're Still Marching — Prototype</title>
+    <!-- Important on iPhone to remove the right-edge black bar -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover"/>
 
-  <!-- A-Frame + AR.js -->
-  <script src="https://aframe.io/releases/1.2.0/aframe.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/gh/AR-js-org/AR.js@3.3.2/aframe/build/aframe-ar.min.js"></script>
+    <!-- A-Frame -->
+    <script src="https://aframe.io/releases/1.4.0/aframe.min.js"></script>
+    <!-- AR.js (A-Frame build) -->
+    <script src="https://cdn.jsdelivr.net/gh/AR-js-org/AR.js@3.3.2/aframe/build/aframe-ar.min.js"></script>
 
-  <style>
-    html, body { margin:0; height:100%; }
-    body { background:#000; color:#fff; font-family: Arial, sans-serif; }
-
-    /* Camera video BELOW canvas */
-    video#arjs-video, video.arjs-video, video[playsinline] {
-      position: fixed !important;
-      top: 0; left: 0;
-      width: 100% !important;
-      height: 100% !important;
-      object-fit: cover;
-      z-index: 0;
-      background: #000;
-    }
-    canvas.a-canvas, .a-canvas canvas {
-      position: fixed !important;
-      top: 0; left: 0;
-      width: 100% !important;
-      height: 100% !important;
-      z-index: 1;
-    }
-    a-scene {
-      position: fixed !important;
-      top: 0; left: 0;
-      width: 100% !important;
-      height: 100% !important;
-    }
-
-    /* Start overlay */
-    #start-screen {
-      position: fixed; inset: 0;
-      display: flex; align-items: center; justify-content: center;
-      background: rgba(0,0,0,0.85); z-index: 10; flex-direction: column;
-      text-align: center; padding: 24px;
-    }
-    #start-screen h2 { margin: 0 0 8px; }
-    #start-screen button {
-      padding: 12px 22px; font-size: 18px;
-      border-radius: 8px; border: none; background:#ff6b6b; color:#fff;
-      cursor: pointer;
-    }
-    #hint { margin-top: 12px; font-size: 14px; color: #ddd; max-width: 360px; }
-  </style>
-</head>
-
-<body>
-  <!-- Tap gate -->
-  <div id="start-screen">
-    <h2>We're Still Marching — Prototype</h2>
-    <button id="start-button">Start the Experience</button>
-    <div id="hint">Tap “Start”, allow camera, then point your phone at a printed <b>HIRO</b> marker.</div>
-  </div>
-
-  <a-scene
-    embedded
-    vr-mode-ui="enabled: false"
-    renderer="antialias:true; alpha:true; precision: mediump"
-    arjs="sourceType: webcam; facingMode: environment; debugUIEnabled: false; detectionMode: mono; patternRatio: 0.9"
-  >
-    <a-assets>
-      <!-- VIDEO: no autoplay, no 'muted' attribute; we'll control it in JS -->
-      <video id="thembekaVideo"
-             src="assets/thembeka.mp4"
-             preload="metadata"
-             playsinline
-             webkit-playsinline
-             crossorigin="anonymous"
-             loop></video>
-    </a-assets>
-
-    <a-marker preset="hiro" id="marker-thembeka" emitevents="true">
-      <!-- Unlit plane so it always shows -->
-      <a-plane id="videoPlane"
-               position="0 0 0"
-               rotation="-90 0 0"
-               width="1" height="1"
-               material="src: #thembekaVideo; shader: flat"
-               visible="false"></a-plane>
-
-      <!-- Obvious debug shape (optional) -->
-      <a-torus-knot id="probe"
-                    position="0 0.5 0"
-                    radius="0.25" radius-tubular="0.06"
-                    color="#FF00FF"
-                    visible="false"></a-torus-knot>
-    </a-marker>
-
-    <a-entity camera></a-entity>
-  </a-scene>
-
-  <script>
-    const startBtn    = document.querySelector('#start-button');
-    const startScreen = document.querySelector('#start-screen');
-    const marker      = document.querySelector('#marker-thembeka');
-
-    const vid   = document.querySelector('#thembekaVideo');
-    const plane = document.querySelector('#videoPlane');
-    const probe = document.querySelector('#probe');
-
-    // Make absolutely sure nothing plays on load
-    document.addEventListener('DOMContentLoaded', () => {
-      try { vid.pause(); vid.currentTime = 0; } catch(e){}
-    });
-
-    // Prime silently on user gesture (iOS requires a play in a gesture)
-    startBtn.addEventListener('click', async () => {
-      try {
-        vid.muted = true;        // force silent prime
-        await vid.play();        // start (silent)
-        vid.pause();             // immediately pause
-        vid.currentTime = 0;     // rewind
-      } catch (e) {
-        console.log('Silent prime failed (will still play on marker):', e);
+    <style>
+      :root{
+        /* iOS safe areas */
+        --s-top: env(safe-area-inset-top);
+        --s-right: env(safe-area-inset-right);
+        --s-bottom: env(safe-area-inset-bottom);
+        --s-left: env(safe-area-inset-left);
       }
-      startScreen.style.display = 'none';
-    });
-
-    marker.addEventListener('markerFound', async () => {
-      if (plane) plane.setAttribute('visible', 'true');
-      if (probe) probe.setAttribute('visible', 'true');
-      try {
-        vid.muted = false;       // allow sound now that marker is found
-        await vid.play();        // start playback with audio
-      } catch (e) {
-        console.log('Video play blocked:', e);
+      html, body {
+        margin: 0; height: 100%;
+        background: #000; color: #fff; font-family: Arial, sans-serif;
       }
-    });
+      body { padding: var(--s-top) var(--s-right) var(--s-bottom) var(--s-left); }
 
-    marker.addEventListener('markerLost', () => {
-      if (plane) plane.setAttribute('visible', 'false');
-      if (probe) probe.setAttribute('visible', 'false');
-      try {
-        vid.pause();
-        vid.currentTime = 0;
-        vid.muted = true;        // re-mute so it can’t leak on re-entry
-      } catch(e){}
-    });
-  </script>
+      /* Make camera/video/canvas fill the screen */
+      video#arjs-video, video.arjs-video, video[playsinline],
+      canvas.a-canvas, .a-canvas canvas, a-scene {
+        position: fixed !important;
+        top: 0; left: 0;
+        width: 100% !important; height: 100% !important;
+        object-fit: cover;
+      }
 
-</body>
+      /* Start overlay */
+      #start-screen {
+        position: fixed; inset: 0;
+        display: flex; align-items: center; justify-content: center;
+        background: rgba(0,0,0,0.85); z-index: 9999;
+        flex-direction: column; text-align: center; padding: 24px;
+      }
+      #start-screen h2 { margin-bottom: 8px; }
+      #start-screen button {
+        padding: 12px 22px; font-size: 18px; border-radius: 8px;
+        border: none; background:#ff6b6b; color:#fff; cursor: pointer;
+      }
+      #hint { margin-top: 12px; font-size: 14px; color: #ddd; max-width: 360px; }
+    </style>
+  </head>
+
+  <body>
+    <!-- Start screen (required to allow audio on mobile) -->
+    <div id="start-screen">
+      <h2>We're Still Marching — Prototype</h2>
+      <button id="start-button">Start the Experience</button>
+      <div id="hint">Tap “Start”, allow camera, then point your phone at the printed <b>HIRO</b> marker.</div>
+    </div>
+
+    <!-- Keep one hidden HTML <img> so browsers animate the GIF texture more reliably -->
+    <img id="thembekaImg" src="assets/thembeka.gif" style="display:none" crossorigin="anonymous" alt="">
+
+    <a-scene
+      embedded
+      vr-mode-ui="enabled: false"
+      renderer="antialias:true"
+      arjs="sourceType: webcam; debugUIEnabled: false; trackingMethod: best; patternRatio: 0.9">
+
+      <a-assets>
+        <img   id="thembekaGif"   src="assets/thembeka.gif"  crossorigin="anonymous" alt="">
+        <audio id="thembekaAudio" src="assets/thembeka.mp3" preload="auto" playsinline webkit-playsinline></audio>
+      </a-assets>
+
+      <!-- Use the built-in HIRO marker for this first prototype -->
+      <a-marker preset="hiro" id="marker-thembeka" emitevents="true">
+        <!-- Thembeka’s animated 2D character (GIF). Flat material so lighting won't hide it. -->
+        <a-image
+          id="thembekaPlane"
+          src="#thembekaGif"
+          rotation="-90 0 0"
+          width="1.2" height="1.6"
+          position="0 0 0"
+          visible="false"
+          material="shader: flat; transparent: true; alphaTest: 0.01">
+        </a-image>
+      </a-marker>
+
+      <a-entity camera></a-entity>
+    </a-scene>
+
+    <script>
+      const startBtn       = document.querySelector('#start-button');
+      const startScreen    = document.querySelector('#start-screen');
+      const marker         = document.querySelector('#marker-thembeka');
+      const thembekaPlane  = document.querySelector('#thembekaPlane');
+      const voice          = document.querySelector('#thembekaAudio');
+
+      // Require a user gesture before any audio (Safari/iOS)
+      startBtn.addEventListener('click', async () => {
+        try { // warm-up
+          await voice.play(); voice.pause(); voice.currentTime = 0;
+        } catch(e) { /* ignore */ }
+        startScreen.style.display = 'none';
+      });
+
+      // Show/hide sprite and play/pause audio when marker appears/disappears
+      marker.addEventListener('markerFound', () => {
+        console.log('HIRO marker found');
+        thembekaPlane.setAttribute('visible', 'true');
+        voice.play().catch(()=>{ console.log('Autoplay prevented; ensure Start was tapped.'); });
+      });
+
+      marker.addEventListener('markerLost', () => {
+        console.log('HIRO marker lost');
+        thembekaPlane.setAttribute('visible', 'false');
+        voice.pause(); voice.currentTime = 0;
+      });
+    </script>
+  </body>
 </html>
