@@ -2,13 +2,13 @@
 <html>
 <head>
 <meta charset="utf-8">
-<title>HIRO Minimal Sanity</title>
+<title>HIRO Marker — Detector Test</title>
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <script src="https://aframe.io/releases/1.2.0/aframe.min.js"></script>
 <script src="https://cdn.jsdelivr.net/gh/AR-js-org/AR.js@3.3.2/aframe/build/aframe-ar.min.js"></script>
 <style>
   html,body{margin:0;height:100%;width:100%;overflow:hidden;background:#000}
-  /* Seam killer: overscan + tiny scale */
+  /* Right-edge black strip killer: overscan + tiny scale */
   video#arjs-video, video.arjs-video, video[playsinline]{
     position:fixed!important; top:0; left:-2px;
     width:calc(100dvw + 4px)!important; height:100dvh!important;
@@ -22,7 +22,8 @@
     transform:translateZ(0) scale(1.003); transform-origin:left center;
   }
   a-scene{position:fixed!important; inset:0!important; width:100dvw!important; height:100dvh!important}
-  #status{position:fixed;left:8px;bottom:8px;z-index:5;background:rgba(0,0,0,.6);color:#0f0;font:12px/1.3 monospace;padding:6px 8px;border-radius:6px}
+  #status{position:fixed;left:8px;bottom:8px;z-index:5;background:rgba(0,0,0,.6);color:#0f0;
+          font:12px/1.3 monospace;padding:6px 8px;border-radius:6px}
 </style>
 </head>
 <body>
@@ -32,11 +33,14 @@
   embedded
   vr-mode-ui="enabled:false"
   renderer="antialias:true; alpha:true; precision:mediump"
-  arjs="sourceType:webcam; facingMode:environment; debugUIEnabled:true; detectionMode:mono; patternRatio:0.90">
-  <!-- ^ debugUIEnabled:true gives you sliders (threshold/blockSize) to tune detection -->
 
+  <!-- ⬇️ THIS is where you enable the on-screen tuning sliders -->
+  <!-- debugUIEnabled:true shows the debug panel with threshold/blockSize controls -->
+  arjs="sourceType:webcam; facingMode:environment; debugUIEnabled:true; detectionMode:mono; patternRatio:0.90">
+
+  <!-- Built-in HIRO marker (no extra files needed) -->
   <a-marker preset="hiro" id="hiro" emitevents="true">
-    <!-- Big obvious, UNLIT cube -->
+    <!-- A big, unlit magenta cube that’s impossible to miss -->
     <a-box id="probe" position="0 0.5 0" width="0.6" height="0.6" depth="0.6"
            material="color:#FF00FF; shader:flat" visible="false"></a-box>
   </a-marker>
@@ -50,17 +54,19 @@ const marker   = document.getElementById('hiro');
 const probe    = document.getElementById('probe');
 
 window.addEventListener('load', ()=>{
-  statusEl.textContent = 'Point at PRINTED HIRO… (use the debug panel if needed)';
+  statusEl.textContent = 'Point at your PRINTED HIRO… (use the debug sliders top-left if nothing happens)';
 });
 
+// When the marker is detected, show the cube and update text
 marker.addEventListener('markerFound', ()=>{
   probe.setAttribute('visible','true');
   statusEl.textContent = 'HIRO FOUND ✅';
 });
 
+// When you move off the marker, hide the cube and show hint again
 marker.addEventListener('markerLost', ()=>{
   probe.setAttribute('visible','false');
-  statusEl.textContent = 'Point at PRINTED HIRO…';
+  statusEl.textContent = 'Point at your PRINTED HIRO…';
 });
 </script>
 </body>
