@@ -1,0 +1,55 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Baseline AR.js (show the cube first)</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+  <script src="https://aframe.io/releases/1.2.0/aframe.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/gh/AR-js-org/AR.js@3.3.2/aframe/build/aframe-ar.min.js"></script>
+  <style>
+    /* Minimal: NO overscan, NO transforms, NO z-index games */
+    html,body{margin:0;height:100%;background:#000;}
+    #status{position:fixed;left:8px;bottom:8px;z-index:5;background:rgba(0,0,0,.6);color:#0f0;font:12px/1.3 monospace;padding:6px 8px;border-radius:6px}
+  </style>
+</head>
+<body>
+<div id="status">loading…</div>
+
+<a-scene
+  embedded
+  vr-mode-ui="enabled:false"
+  renderer="antialias:true; alpha:false; precision:mediump"  <!-- opaque canvas -->
+  arjs="sourceType:webcam; facingMode:environment; detectionMode:mono; debugUIEnabled:true; patternRatio:0.5">
+  <!-- Use DIRECT HIRO pattern file -->
+  <a-marker id="hiro" type="pattern" emitevents="true"
+    url="https://raw.githubusercontent.com/jeromeetienne/AR.js/master/three.js/examples/marker-training/examples/pattern-files/pattern-hiro.patt">
+    <!-- Big UNLIT cube and a white plane -->
+    <a-box id="cube" position="0 1 0" width="2" height="2" depth="2"
+           material="color:#FF00FF; shader:flat" visible="false"></a-box>
+    <a-plane id="pad" rotation="-90 0 0" width="2" height="2"
+             material="color:#FFFFFF; shader:flat; opacity:0.9" visible="false"></a-plane>
+  </a-marker>
+  <a-entity camera></a-entity>
+</a-scene>
+
+<script>
+const st = document.getElementById('status');
+const marker = document.getElementById('hiro');
+const cube = document.getElementById('cube');
+const pad  = document.getElementById('pad');
+
+window.addEventListener('load', ()=> st.textContent = 'Tap the debug panel (top-left). Point at PRINTED HIRO…');
+
+marker.addEventListener('markerFound', ()=>{
+  cube.setAttribute('visible','true');
+  pad.setAttribute('visible','true');
+  st.textContent = 'HIRO FOUND ✅ (you should see cube + white square)';
+});
+marker.addEventListener('markerLost', ()=>{
+  cube.setAttribute('visible','false');
+  pad.setAttribute('visible','false');
+  st.textContent = 'Point at PRINTED HIRO…';
+});
+</script>
+</body>
+</html>
