@@ -1,194 +1,81 @@
 <!doctype html>
-<html>
+<html lang="en">
 <head>
   <meta charset="utf-8" />
-  <title>AR.js — HIRO (Camera Fallback Transparency)</title>
-  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+  <title>We’re Still Marching — Thembeka Test</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
 
-  <!-- A-Frame + AR.js -->
+  <!-- A-Frame 1.2.0 (same as your friend) -->
   <script src="https://aframe.io/releases/1.2.0/aframe.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/gh/AR-js-org/AR.js@3.3.2/aframe/build/aframe-ar.min.js"></script>
+  <!-- AR.js (non-min) matching your friend's include -->
+  <script src="https://cdn.jsdelivr.net/gh/AR-js-org/AR.js/aframe/build/aframe-ar.js"></script>
 
   <style>
-    html, body {
-      margin:0; height:100%; width:100%; overflow:hidden;
-      background:#000; font-family:system-ui, Arial, sans-serif;
+    html, body { height:100%; margin:0; overflow:hidden; background:#000; font-family: Arial, sans-serif; }
+    .ui {
+      position: absolute; top: 12px; left: 12px; z-index: 10;
+      background: rgba(255,255,255,0.92); padding:8px 10px; border-radius:6px;
+      font-size:14px; color:#111; max-width: 80vw;
     }
-
-    /* Camera video BELOW canvas; strong overscan to hide right-edge line */
-    video#arjs-video, video.arjs-video, video[playsinline]{
-      position:fixed !important;
-      top:0; left:-12px !important;                  /* overscan */
-      width:calc(100dvw + 24px) !important;          /* overscan */
-      height:100dvh !important;
-      object-fit:cover !important;
-      z-index:-2 !important;                          /* below canvas */
-      background:#000 !important;
-      pointer-events:none !important;
-      opacity:1 !important; visibility:visible !important; display:block !important;
-      transform:none !important;
-    }
-
-    /* WebGL canvas ABOVE video — we’ll also set opacity via JS (fallback) */
-    canvas.a-canvas, .a-canvas canvas, a-scene canvas{
-      position:fixed !important;
-      top:0; left:-12px !important;                  /* match overscan */
-      width:calc(100dvw + 24px) !important;
-      height:100dvh !important;
-      z-index:0 !important;                           /* above video */
-      display:block !important;
-      pointer-events:none !important;
-      background:transparent !important;
-      transform:none !important;
-      /* Fallback compositing hint; JS will adjust opacity to 0.999 */
-      opacity:1 !important;
-    }
-
-    a-scene{
-      position:fixed !important; inset:0 !important;
-      width:100dvw !important; height:100dvh !important;
-      background:transparent !important;
-    }
-
-    /* Start overlay */
-    #gate{
-      position:fixed; inset:0; z-index:10;
-      display:flex; align-items:center; justify-content:center; flex-direction:column;
-      background:rgba(0,0,0,.88); color:#fff; padding:24px; text-align:center;
-    }
-    #gate button{
-      padding:12px 22px; font-size:18px; border-radius:8px; border:none;
-      background:#ff6b6b; color:#fff; cursor:pointer;
-    }
-
-    #status{
-      position:fixed; left:8px; bottom:8px; z-index:20;
-      background:rgba(0,0,0,.6); color:#0f0; padding:6px 8px; border-radius:6px; font:12px/1.3 monospace;
-    }
+    /* Help iOS fill the screen */
+    canvas.a-canvas, a-scene, .a-canvas { width:100% !important; height:100% !important; }
+    /* Make GIF edges clean if it has alpha */
+    .flat { material: shader: flat; transparent: true; alphaTest: 0.01; }
   </style>
 </head>
 <body>
-  <div id="gate">
-    <h2>Tap Start</h2>
-    <p>Allow the camera, then point at your printed <b>HIRO</b> marker.</p>
-    <button id="start">Start</button>
+  <div class="ui">
+    1) Allow camera access<br>
+    2) Point at printed <b>HIRO</b> marker<br>
+    3) Tap screen once if audio is blocked
   </div>
-  <div id="status">loading…</div>
 
-  <a-scene
-    embedded
-    vr-mode-ui="enabled:false"
+  <a-scene embedded arjs="sourceType: webcam; debugUIEnabled: false;">
+    <!-- Preload assets (MUST match filenames in /assets) -->
+    <a-assets>
+      <img id="thembekaGif" src="assets/thembeka.gif" crossorigin="anonymous">
+      <audio id="thembekaAudio" src="assets/thembeka.mp3" preload="auto" playsinline webkit-playsinline></audio>
+    </a-assets>
 
-    <!-- alpha:true = intended transparent canvas -->
-    renderer="antialias:true; alpha:true; precision:mediump"
+    <!-- Marker: HIRO -->
+    <a-marker preset="hiro" id="markerThembeka">
+      <!-- Simple lighting is harmless even for 2D images -->
+      <a-entity light="type: ambient; intensity: 1"></a-entity>
 
-    arjs="sourceType:webcam; facingMode:environment; detectionMode:mono; debugUIEnabled:false; patternRatio:0.5"
-  >
-    <!-- HIRO ONLY -->
-    <a-marker type="pattern" id="marker" emitevents="true"
-              url="https://raw.githubusercontent.com/jeromeetienne/AR.js/master/three.js/examples/marker-training/examples/pattern-files/pattern-hiro.patt">
-      <a-box id="cube" position="0 1 0" width="2" height="2" depth="2"
-             material="color:#AA33FF; shader:flat" visible="false"></a-box>
-      <a-plane id="pad" rotation="-90 0 0" width="2" height="2"
-               material="color:#FFFFFF; shader:flat; opacity:0.95" visible="false"></a-plane>
+      <!-- Show a pink box FIRST to prove tracking; comment it out after -->
+      <!-- <a-box color="#FF6B6B" depth="0.4" height="0.4" width="0.4" position="0 0.2 0" rotation="-90 0 0"></a-box> -->
+
+      <!-- Your animated 2D character (GIF) -->
+      <a-image id="thembekaPlane"
+               src="#thembekaGif"
+               position="0 0 0"
+               rotation="-90 0 0"
+               width="1.2" height="1.6"
+               visible="true"
+               material="shader: flat; transparent: true; alphaTest: 0.01">
+      </a-image>
     </a-marker>
 
     <a-entity camera></a-entity>
   </a-scene>
 
   <script>
-    const st     = document.getElementById('status');
-    const gate   = document.getElementById('gate');
-    const start  = document.getElementById('start');
-    const marker = document.getElementById('marker');
-    const cube   = document.getElementById('cube');
-    const pad    = document.getElementById('pad');
+    const marker = document.querySelector('#markerThembeka');
+    const audio  = document.querySelector('#thembekaAudio');
 
-    // Force true transparent clears (proper path)
-    function forceTransparentClear() {
-      const sceneEl = document.querySelector('a-scene');
-      if (!sceneEl || !sceneEl.renderer) return;
-      try {
-        const r = sceneEl.renderer;
-        r.autoClear = true;
-        r.setClearColor(0x000000, 0); // alpha = 0
-        const gl = r.getContext && r.getContext();
-        if (gl && gl.clearColor) gl.clearColor(0,0,0,0);
-      } catch(_) {}
-    }
+    // iOS often needs a user tap before audio can play.
+    document.addEventListener('touchend', () => {
+      if (audio.paused) { audio.play().catch(()=>{}); }
+    }, {once:true});
 
-    // Fallback: make canvas slightly translucent to reveal camera even if clears are black
-    function applyCanvasOpacityFallback() {
-      const cvs = document.querySelector('canvas.a-canvas, .a-canvas canvas, a-scene canvas');
-      if (cvs) {
-        // 0.999 is visually opaque for your content but allows background to show through
-        cvs.style.opacity = '0.999';
-      }
-    }
-
-    // Ensure AR.js <video> shows and plays; size & overscan it
-    function getCamVideo(){
-      return document.querySelector('video#arjs-video, video.arjs-video, video[playsinline]');
-    }
-    async function ensureCameraPlaying(){
-      const v = getCamVideo(); if (!v) return false;
-      try {
-        v.setAttribute('playsinline',''); v.setAttribute('webkit-playsinline','');
-        v.muted = true; await v.play();
-        Object.assign(v.style, {
-          visibility:'visible', opacity:'1', display:'block',
-          position:'fixed', top:'0px', left:'-12px',
-          width:'calc(100dvw + 24px)', height:'100dvh',
-          objectFit:'cover', zIndex:'-2', transform:'none'
-        });
-        return true;
-      } catch(e){ console.log('Camera play failed:', e); return false; }
-    }
-
-    // Keep enforcing during startup (AR.js injects late)
-    let ticks = 0;
-    const boot = setInterval(()=>{
-      forceTransparentClear();
-      applyCanvasOpacityFallback();
-      ensureCameraPlaying();
-      if (++ticks > 120) clearInterval(boot); // ~6s @ 50ms
-    }, 50);
-
-    // Also re-apply on DOM changes / resize / rotate
-    new MutationObserver(()=>{
-      forceTransparentClear();
-      applyCanvasOpacityFallback();
-      ensureCameraPlaying();
-    }).observe(document.documentElement, {subtree:true, childList:true});
-
-    addEventListener('resize', ()=>{
-      ensureCameraPlaying();
-    });
-    addEventListener('orientationchange', ()=>{
-      setTimeout(ensureCameraPlaying, 300);
+    marker.addEventListener('markerFound', () => {
+      // Try to play on marker found; if blocked, one tap will unlock it.
+      audio.play().catch(()=>{ /* user can tap once to start */ });
     });
 
-    // Start gate
-    start.addEventListener('click', async ()=>{
-      gate.style.display = 'none';
-      st.textContent = 'Starting camera…';
-      forceTransparentClear();
-      applyCanvasOpacityFallback();
-      await ensureCameraPlaying();
-      setTimeout(ensureCameraPlaying, 300);
-      setTimeout(ensureCameraPlaying, 1000);
-    });
-
-    // Marker events
-    marker.addEventListener('markerFound', ()=>{
-      cube.setAttribute('visible','true');
-      pad.setAttribute('visible','true');
-      st.textContent = 'HIRO FOUND ✅ (camera should be visible behind)';
-    });
-    marker.addEventListener('markerLost', ()=>{
-      cube.setAttribute('visible','false');
-      pad.setAttribute('visible','false');
-      st.textContent = 'Point at the printed HIRO…';
+    marker.addEventListener('markerLost', () => {
+      audio.pause();
+      audio.currentTime = 0;
     });
   </script>
 </body>
