@@ -13,18 +13,9 @@
     html, body { margin:0; height:100%; width:100%; overflow:hidden; background:#000; font-family:system-ui, Arial, sans-serif; }
 
     /* Camera video BELOW the canvas (we will attach this style via JS too) */
-    video#arjs-video, video.arjs-video, video[playsinline]{
-      position:fixed !important;
-      top:0; left:0;
-      width:100vw !important; height:100vh !important;
-      object-fit:cover !important;
-      z-index:0 !important;               /* BELOW */
-      background:#000;
-      pointer-events:none;
-      visibility:visible !important;
-      opacity:1 !important;
-      display:block !important;
-    }
+    video#arjs-video, video.arjs-video, video[playsinline]{ z-index:1 !important; }
+canvas.a-canvas, .a-canvas canvas{ z-index:0 !important; }
+
 
     /* WebGL canvas ABOVE video — transparent because renderer alpha:true */
     canvas.a-canvas, .a-canvas canvas{
@@ -72,7 +63,7 @@
     vr-mode-ui="enabled:false"
 
     <!-- IMPORTANT: alpha:true makes the canvas transparent over the video -->
-    renderer="antialias:true; alpha:true; precision:mediump"
+    renderer="antialias:true; alpha:false; precision:mediump"
 
     arjs="sourceType:webcam; facingMode:environment; detectionMode:mono; debugUIEnabled:false"
   >
