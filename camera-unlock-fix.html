@@ -1,9 +1,9 @@
 <!doctype html>
 <html>
 <head>
-  <meta charset="utf-8">
-  <title>AR.js — Camera Unlock + Layer Fix</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+  <meta charset="utf-8" />
+  <title>AR.js — Final Camera Transparency Fix</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
 
   <!-- A-Frame + AR.js -->
   <script src="https://aframe.io/releases/1.2.0/aframe.min.js"></script>
@@ -12,29 +12,37 @@
   <style>
     html, body { margin:0; height:100%; width:100%; overflow:hidden; background:#000; font-family:system-ui, Arial, sans-serif; }
 
-    /* Camera video BELOW the canvas (we will attach this style via JS too) */
-    video#arjs-video, video.arjs-video, video[playsinline]{ z-index:1 !important; }
-canvas.a-canvas, .a-canvas canvas{ z-index:0 !important; }
+    /* Put the camera video BEHIND… */
+    video#arjs-video, video.arjs-video, video[playsinline]{
+      position:fixed !important;
+      top:0; left:0;
+      width:100vw !important; height:100vh !important;
+      object-fit:cover !important;
+      z-index:0 !important;               /* BEHIND the canvas */
+      background:#000;
+      pointer-events:none;
+      visibility:visible !important; opacity:1 !important; display:block !important;
+    }
 
-
-    /* WebGL canvas ABOVE video — transparent because renderer alpha:true */
+    /* …and the A-Frame WebGL canvas ABOVE (but transparent). */
     canvas.a-canvas, .a-canvas canvas{
       position:fixed !important;
       top:0; left:0;
       width:100vw !important; height:100vh !important;
-      z-index:1 !important;               /* ABOVE */
+      z-index:1 !important;               /* ABOVE video */
       display:block !important;
       pointer-events:none;
-      background: transparent !important;
+      background:transparent !important;  /* belt & suspenders */
     }
 
     a-scene{
       position:fixed !important;
       inset:0 !important;
       width:100vw !important; height:100vh !important;
-      background: transparent !important;
+      background:transparent !important;  /* make scene background transparent */
     }
 
+    /* Start overlay */
     #gate{
       position:fixed; inset:0; z-index:10;
       display:flex; align-items:center; justify-content:center; flex-direction:column;
@@ -62,12 +70,12 @@ canvas.a-canvas, .a-canvas canvas{ z-index:0 !important; }
     embedded
     vr-mode-ui="enabled:false"
 
-    <!-- IMPORTANT: alpha:true makes the canvas transparent over the video -->
-    renderer="antialias:true; alpha:false; precision:mediump"
+    <!-- alpha:true = transparent canvas (so the video shows through) -->
+    renderer="antialias:true; alpha:true; precision:mediump"
 
     arjs="sourceType:webcam; facingMode:environment; detectionMode:mono; debugUIEnabled:false"
   >
-    <!-- Use BARCODE #5 first (you saw detection here before) -->
+    <!-- Keep barcode #5 since you confirmed detection before; switch to HIRO after camera shows -->
     <a-marker type="barcode" value="5" id="marker" emitevents="true">
       <a-box id="cube"
              position="0 1 0"
@@ -76,7 +84,7 @@ canvas.a-canvas, .a-canvas canvas{ z-index:0 !important; }
              visible="false"></a-box>
     </a-marker>
 
-    <!-- If you want HIRO instead, comment out the barcode marker above and UNcomment this:
+    <!-- To use HIRO instead, comment the barcode marker above and UNcomment this:
     <a-marker type="pattern" emitevents="true"
               url="https://raw.githubusercontent.com/jeromeetienne/AR.js/master/three.js/examples/marker-training/examples/pattern-files/pattern-hiro.patt">
       <a-box id="cube" position="0 1 0" width="2" height="2" depth="2"
@@ -94,7 +102,25 @@ canvas.a-canvas, .a-canvas canvas{ z-index:0 !important; }
     const marker= document.getElementById('marker');
     const cube  = document.getElementById('cube');
 
-    // Helper: find AR.js video and force it to play + be visible
+    // 1) Make the canvas truly transparent (A-Frame sometimes clears to black even with alpha:true).
+    document.addEventListener('DOMContentLoaded', () => {
+      const tryMakeTransparent = () => {
+        const scene = document.querySelector('a-scene');
+        if (!scene || !scene.renderer) return false;
+        // Force transparent clear (alpha = 0)
+        scene.renderer.setClearColor(0x000000, 0);
+        // Older three.js path:
+        if (scene.renderer.getContext) {
+          const gl = scene.renderer.getContext();
+          try { gl.clearColor(0,0,0,0); } catch(_) {}
+        }
+        return true;
+      };
+      const t = setInterval(() => { if (tryMakeTransparent()) clearInterval(t); }, 50);
+      setTimeout(() => clearInterval(t), 3000);
+    });
+
+    // 2) Find the AR.js camera <video> and force it to play + be visible.
     function getCamVideo(){
       return document.querySelector('video#arjs-video, video.arjs-video, video[playsinline]');
     }
@@ -102,50 +128,40 @@ canvas.a-canvas, .a-canvas canvas{ z-index:0 !important; }
       const v = getCamVideo();
       if (!v) return false;
       try {
-        v.setAttribute('playsinline','');
-        v.setAttribute('webkit-playsinline','');
-        v.muted = true;        // allow autoplay on iOS
-        await v.play();        // start stream
-        // force styling in case AR.js applied odd defaults
-        v.style.visibility = 'visible';
-        v.style.opacity = '1';
-        v.style.display = 'block';
-        v.style.position = 'fixed';
-        v.style.top = '0px';
-        v.style.left = '0px';
-        v.style.width = '100vw';
-        v.style.height = '100vh';
-        v.style.objectFit = 'cover';
-        v.style.zIndex = 0;
+        v.setAttribute('playsinline',''); v.setAttribute('webkit-playsinline','');
+        v.muted = true;            // allow autoplay policies
+        await v.play();            // start the stream
+        // Force visibility and sizing (belt & suspenders)
+        Object.assign(v.style, {
+          visibility:'visible', opacity:'1', display:'block',
+          position:'fixed', top:'0px', left:'0px',
+          width:'100vw', height:'100vh', objectFit:'cover', zIndex:'0'
+        });
         return true;
-      } catch (e) {
-        console.log('Camera play failed:', e);
-        return false;
-      }
+      } catch(e) { console.log('Camera play failed:', e); return false; }
     }
 
-    // Watch the DOM for when AR.js injects the video, then style/play it
+    // 3) Watch for AR.js injecting the video; when it appears, start it.
     const mo = new MutationObserver(async () => {
       const ok = await ensureCameraPlaying();
-      if (ok) { st.textContent = 'Camera ready. Point at the printed barcode #5…'; }
+      if (ok) st.textContent = 'Camera ready. Point at your printed marker…';
     });
     mo.observe(document.documentElement, {subtree:true, childList:true});
 
-    // Start button: user gesture to unlock autoplay policies
+    // 4) Start overlay to give us a user gesture
     start.addEventListener('click', async ()=>{
       gate.style.display = 'none';
-      // try immediately (in case the video is already injected)
+      st.textContent = 'Starting camera…';
+      // Try a few times (some devices are slow)
       await ensureCameraPlaying();
-      st.textContent = 'Trying camera… if you see black, wait 1–2s.';
-      // re-try a couple times (devices can be slow)
-      setTimeout(ensureCameraPlaying, 400);
+      setTimeout(ensureCameraPlaying, 300);
       setTimeout(ensureCameraPlaying, 1000);
     });
 
-    // Marker events
+    // 5) Show/hide cube on marker events
     marker.addEventListener('markerFound', ()=>{
       cube.setAttribute('visible','true');
-      st.textContent = 'MARKER FOUND ✅ (you should see cube AND the camera feed)';
+      st.textContent = 'MARKER FOUND ✅ (you should see cube AND camera feed)';
     });
     marker.addEventListener('markerLost', ()=>{
       cube.setAttribute('visible','false');
