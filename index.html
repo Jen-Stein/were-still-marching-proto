@@ -2,7 +2,7 @@
 <html>
 <head>
   <meta charset="utf-8" />
-  <title>AR.js — HIRO (Final Camera Transparency + Seam Fix)</title>
+  <title>AR.js — HIRO (Camera Fallback Transparency)</title>
   <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 
   <!-- A-Frame + AR.js -->
@@ -10,59 +10,60 @@
   <script src="https://cdn.jsdelivr.net/gh/AR-js-org/AR.js@3.3.2/aframe/build/aframe-ar.min.js"></script>
 
   <style>
-    html, body { margin:0; height:100%; width:100%; overflow:hidden; background:#000; font-family:system-ui, Arial, sans-serif; }
-
-    /* Camera video BELOW canvas; strong overscan to kill right-edge strip */
-    video#arjs-video,
-    video.arjs-video,
-    video[playsinline]{
-      position: fixed !important;
-      top: 0; left: -12px !important;                 /* overscan */
-      width: calc(100dvw + 24px) !important;          /* overscan */
-      height: 100dvh !important;
-      object-fit: cover !important;
-      z-index: -2 !important;                          /* BELOW canvas */
-      background: #000 !important;
-      pointer-events: none !important;
-      transform: none !important;
-      opacity: 1 !important; visibility: visible !important; display: block !important;
+    html, body {
+      margin:0; height:100%; width:100%; overflow:hidden;
+      background:#000; font-family:system-ui, Arial, sans-serif;
     }
 
-    /* WebGL canvas ABOVE video — must be transparent */
-    canvas.a-canvas,
-    .a-canvas canvas,
-    a-scene canvas{
-      position: fixed !important;
-      top: 0; left: -12px !important;                 /* match overscan */
-      width: calc(100dvw + 24px) !important;
-      height: 100dvh !important;
-      z-index: 0 !important;                           /* ABOVE video */
-      display: block !important;
-      pointer-events: none !important;
-      background: transparent !important;
-      transform: none !important;
+    /* Camera video BELOW canvas; strong overscan to hide right-edge line */
+    video#arjs-video, video.arjs-video, video[playsinline]{
+      position:fixed !important;
+      top:0; left:-12px !important;                  /* overscan */
+      width:calc(100dvw + 24px) !important;          /* overscan */
+      height:100dvh !important;
+      object-fit:cover !important;
+      z-index:-2 !important;                          /* below canvas */
+      background:#000 !important;
+      pointer-events:none !important;
+      opacity:1 !important; visibility:visible !important; display:block !important;
+      transform:none !important;
+    }
+
+    /* WebGL canvas ABOVE video — we’ll also set opacity via JS (fallback) */
+    canvas.a-canvas, .a-canvas canvas, a-scene canvas{
+      position:fixed !important;
+      top:0; left:-12px !important;                  /* match overscan */
+      width:calc(100dvw + 24px) !important;
+      height:100dvh !important;
+      z-index:0 !important;                           /* above video */
+      display:block !important;
+      pointer-events:none !important;
+      background:transparent !important;
+      transform:none !important;
+      /* Fallback compositing hint; JS will adjust opacity to 0.999 */
+      opacity:1 !important;
     }
 
     a-scene{
-      position: fixed !important; inset: 0 !important;
-      width: 100dvw !important; height: 100dvh !important;
-      background: transparent !important;
+      position:fixed !important; inset:0 !important;
+      width:100dvw !important; height:100dvh !important;
+      background:transparent !important;
     }
 
-    /* Start overlay to unlock camera on iOS */
+    /* Start overlay */
     #gate{
-      position: fixed; inset: 0; z-index: 10;
-      display: flex; align-items: center; justify-content: center; flex-direction: column;
-      background: rgba(0,0,0,.88); color: #fff; padding: 24px; text-align: center;
+      position:fixed; inset:0; z-index:10;
+      display:flex; align-items:center; justify-content:center; flex-direction:column;
+      background:rgba(0,0,0,.88); color:#fff; padding:24px; text-align:center;
     }
     #gate button{
-      padding: 12px 22px; font-size: 18px; border-radius: 8px; border: none;
-      background: #ff6b6b; color:#fff; cursor: pointer;
+      padding:12px 22px; font-size:18px; border-radius:8px; border:none;
+      background:#ff6b6b; color:#fff; cursor:pointer;
     }
 
     #status{
-      position: fixed; left: 8px; bottom: 8px; z-index: 20;
-      background: rgba(0,0,0,.6); color: #0f0; padding: 6px 8px; border-radius: 6px; font: 12px/1.3 monospace;
+      position:fixed; left:8px; bottom:8px; z-index:20;
+      background:rgba(0,0,0,.6); color:#0f0; padding:6px 8px; border-radius:6px; font:12px/1.3 monospace;
     }
   </style>
 </head>
@@ -78,7 +79,7 @@
     embedded
     vr-mode-ui="enabled:false"
 
-    <!-- alpha:true = must be transparent -->
+    <!-- alpha:true = intended transparent canvas -->
     renderer="antialias:true; alpha:true; precision:mediump"
 
     arjs="sourceType:webcam; facingMode:environment; detectionMode:mono; debugUIEnabled:false; patternRatio:0.5"
@@ -86,11 +87,10 @@
     <!-- HIRO ONLY -->
     <a-marker type="pattern" id="marker" emitevents="true"
               url="https://raw.githubusercontent.com/jeromeetienne/AR.js/master/three.js/examples/marker-training/examples/pattern-files/pattern-hiro.patt">
-      <!-- Make visuals obvious -->
       <a-box id="cube" position="0 1 0" width="2" height="2" depth="2"
              material="color:#AA33FF; shader:flat" visible="false"></a-box>
       <a-plane id="pad" rotation="-90 0 0" width="2" height="2"
-               material="color:#FFFFFF; shader:flat; opacity:0.9" visible="false"></a-plane>
+               material="color:#FFFFFF; shader:flat; opacity:0.95" visible="false"></a-plane>
     </a-marker>
 
     <a-entity camera></a-entity>
@@ -104,73 +104,86 @@
     const cube   = document.getElementById('cube');
     const pad    = document.getElementById('pad');
 
-    // 1) Force transparent clear EVERY frame (some devices re-black the canvas)
+    // Force true transparent clears (proper path)
     function forceTransparentClear() {
       const sceneEl = document.querySelector('a-scene');
       if (!sceneEl || !sceneEl.renderer) return;
       try {
         const r = sceneEl.renderer;
-        r.autoClear = true;                   // let it clear, but with alpha 0
-        r.setClearColor(0x000000, 0);         // <-- alpha 0 (transparent)
-        // extra belt-and-suspenders on the GL context:
+        r.autoClear = true;
+        r.setClearColor(0x000000, 0); // alpha = 0
         const gl = r.getContext && r.getContext();
         if (gl && gl.clearColor) gl.clearColor(0,0,0,0);
       } catch(_) {}
     }
 
-    // 2) Keep video/canvas layered & sized (overscan + z-index)
-    function enforceLayers() {
-      const vid = document.querySelector('video#arjs-video, video.arjs-video, video[playsinline]');
+    // Fallback: make canvas slightly translucent to reveal camera even if clears are black
+    function applyCanvasOpacityFallback() {
       const cvs = document.querySelector('canvas.a-canvas, .a-canvas canvas, a-scene canvas');
-      const apply = el => {
-        if (!el) return;
-        el.style.position = 'fixed';
-        el.style.top = '0px';
-        el.style.left = '-12px';                           // overscan
-        el.style.width = 'calc(100dvw + 24px)';            // overscan
-        el.style.height = '100dvh';
-        el.style.objectFit = 'cover';
-        el.style.transform = 'none';
-      };
-      if (vid) {
-        apply(vid);
-        vid.style.zIndex = '-2';
-        vid.style.pointerEvents = 'none';
-        vid.style.opacity = '1';
-        vid.style.visibility = 'visible';
-        vid.setAttribute('playsinline',''); vid.setAttribute('webkit-playsinline','');
-        try { vid.muted = true; vid.play().catch(()=>{}); } catch(_){}
-      }
       if (cvs) {
-        apply(cvs);
-        cvs.style.zIndex = '0';
-        cvs.style.background = 'transparent';
-        cvs.style.pointerEvents = 'none';
+        // 0.999 is visually opaque for your content but allows background to show through
+        cvs.style.opacity = '0.999';
       }
     }
 
-    // 3) Re-apply both fixes frequently during startup & when DOM changes
-    let t = 0;
-    const tick = setInterval(() => { forceTransparentClear(); enforceLayers(); if (++t>100) clearInterval(tick); }, 50);
-    new MutationObserver(() => { forceTransparentClear(); enforceLayers(); }).observe(document.documentElement, {subtree:true, childList:true});
-    addEventListener('resize', enforceLayers);
-    addEventListener('orientationchange', () => setTimeout(enforceLayers, 300));
+    // Ensure AR.js <video> shows and plays; size & overscan it
+    function getCamVideo(){
+      return document.querySelector('video#arjs-video, video.arjs-video, video[playsinline]');
+    }
+    async function ensureCameraPlaying(){
+      const v = getCamVideo(); if (!v) return false;
+      try {
+        v.setAttribute('playsinline',''); v.setAttribute('webkit-playsinline','');
+        v.muted = true; await v.play();
+        Object.assign(v.style, {
+          visibility:'visible', opacity:'1', display:'block',
+          position:'fixed', top:'0px', left:'-12px',
+          width:'calc(100dvw + 24px)', height:'100dvh',
+          objectFit:'cover', zIndex:'-2', transform:'none'
+        });
+        return true;
+      } catch(e){ console.log('Camera play failed:', e); return false; }
+    }
 
-    // 4) Start overlay (user gesture unlock)
-    start.addEventListener('click', ()=>{
+    // Keep enforcing during startup (AR.js injects late)
+    let ticks = 0;
+    const boot = setInterval(()=>{
+      forceTransparentClear();
+      applyCanvasOpacityFallback();
+      ensureCameraPlaying();
+      if (++ticks > 120) clearInterval(boot); // ~6s @ 50ms
+    }, 50);
+
+    // Also re-apply on DOM changes / resize / rotate
+    new MutationObserver(()=>{
+      forceTransparentClear();
+      applyCanvasOpacityFallback();
+      ensureCameraPlaying();
+    }).observe(document.documentElement, {subtree:true, childList:true});
+
+    addEventListener('resize', ()=>{
+      ensureCameraPlaying();
+    });
+    addEventListener('orientationchange', ()=>{
+      setTimeout(ensureCameraPlaying, 300);
+    });
+
+    // Start gate
+    start.addEventListener('click', async ()=>{
       gate.style.display = 'none';
       st.textContent = 'Starting camera…';
       forceTransparentClear();
-      enforceLayers();
-      setTimeout(enforceLayers, 300);
-      setTimeout(enforceLayers, 1000);
+      applyCanvasOpacityFallback();
+      await ensureCameraPlaying();
+      setTimeout(ensureCameraPlaying, 300);
+      setTimeout(ensureCameraPlaying, 1000);
     });
 
-    // 5) Marker events
+    // Marker events
     marker.addEventListener('markerFound', ()=>{
       cube.setAttribute('visible','true');
       pad.setAttribute('visible','true');
-      st.textContent = 'HIRO FOUND ✅';
+      st.textContent = 'HIRO FOUND ✅ (camera should be visible behind)';
     });
     marker.addEventListener('markerLost', ()=>{
       cube.setAttribute('visible','false');
