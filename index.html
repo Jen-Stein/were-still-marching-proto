@@ -146,7 +146,7 @@
     let markerVisible = false;
     let lostTimer = null;
 
-    // 1) Start: prime media with a user gesture (iOS requirement)
+    // 1) Start: prime media with a user gesture
     startBtn.addEventListener('click', async () => {
       try {
         // Prime video (muted) and audio (will still need play() later)
@@ -155,7 +155,7 @@
         userPrimed = true;
         startUI.style.display = 'none';
       } catch (e) {
-        // If audio refuses, we’ll show Unlock later
+        // Unlock later if audio refuses
         userPrimed = true;
         startUI.style.display = 'none';
       }
@@ -199,6 +199,7 @@
   </script>
 </body>
 </html>
+
 
 
 
