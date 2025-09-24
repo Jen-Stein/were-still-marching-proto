@@ -1,174 +1,70 @@
 <!doctype html>
 <html lang="en">
-  <head>
-    <meta charset="utf-8" />
-    <title>We’re Still Marching — Prototype</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+  <title>We’re Still Marching — AR Test</title>
 
-    <!-- A-Frame (stable with AR.js on iOS) -->
-    <script src="https://aframe.io/releases/1.2.0/aframe.min.js"></script>
-    <!-- AR.js for A-Frame (marker-based) -->
-    <script src="https://cdn.jsdelivr.net/gh/AR-js-org/AR.js/aframe/build/aframe-ar.js"></script>
+  <!-- A-Frame (same as friend’s) -->
+  <script src="https://aframe.io/releases/1.2.0/aframe.min.js"></script>
+  <!-- AR.js (A-Frame build, same as friend’s) -->
+  <script src="https://cdn.jsdelivr.net/gh/AR-js-org/AR.js/aframe/build/aframe-ar.js"></script>
 
-    <style>
-      html, body {
-        margin: 0;
-        height: 100%;
-        background: #000;
-        overflow: hidden;
-        font-family: Arial, sans-serif;
-      }
-      /* Make sure the WebGL canvas fills the screen on iOS */
-      a-scene, .a-canvas, canvas {
-        position: fixed !important;
-        top: 0; left: 0;
-        width: 100vw !important;
-        height: 100vh !important;
-      }
-      /* Start overlay to unlock audio/video on iOS */
-      #start {
-        position: fixed; inset: 0;
-        display: flex; align-items: center; justify-content: center;
-        flex-direction: column;
-        background: rgba(0,0,0,0.85);
-        color: #fff; z-index: 9999; text-align: center; padding: 24px;
-      }
-      #start button {
-        margin-top: 10px;
-        padding: 12px 22px; font-size: 18px;
-        border: 0; border-radius: 8px;
-        background: #ff6b6b; color: #fff;
-      }
-      #hint { margin-top: 8px; font-size: 14px; opacity: 0.85; max-width: 360px; }
-    </style>
-  </head>
-  <body>
-    <!-- Start overlay -->
-    <div id="start">
-      <h2>We’re Still Marching — Prototype</h2>
-      <button id="startBtn">Start</button>
-      <div id="hint">
-        Allow camera. Then point at the printed <b>Hiro</b> marker.<br/>
-        (You should see a red debug plane plus your video.)
-      </div>
-    </div>
+  <style>
+    html, body { height:100%; margin:0; overflow:hidden; background:#000; font-family: Arial, sans-serif; }
+    /* Make the WebGL canvas truly full screen (prevents right-side black strip) */
+    a-scene, .a-canvas, canvas {
+      position: fixed !important;
+      top: 0; left: 0; width: 100vw !important; height: 100vh !important;
+    }
+    .ui {
+      position: absolute; top: 12px; left: 12px; z-index: 10;
+      background: rgba(255,255,255,0.9); padding:8px 10px; border-radius:6px;
+      font-size:14px; color:#111;
+    }
+  </style>
+</head>
+<body>
+  <div class="ui">
+    1) Allow camera access<br>
+    2) Point at the printed <b>Hiro</b> marker<br>
+    3) You should see a RED plane + your GIF on the marker
+  </div>
 
-    <!-- A-Frame + AR.js scene -->
-    <a-scene
-      embedded
-      vr-mode-ui="enabled: false"
-      renderer="alpha: true; antialias: true; logarithmicDepthBuffer: true"
-      arjs="sourceType: webcam; debugUIEnabled: false; trackingMethod: best;">
+  <a-scene embedded arjs="sourceType: webcam; debugUIEnabled: false;">
+    <!-- HIRO marker only (keep it simple) -->
+    <a-marker preset="hiro">
+      <!-- 1) DEBUG: red plane so you know tracking works -->
+      <a-plane color="#ff4444" rotation="-90 0 0" width="0.8" height="0.5" position="0 0 0.01"></a-plane>
 
-      <!-- Preload assets -->
+      <!-- 2) YOUR GIF (2D) — easiest way: direct URL on a-image -->
+      <!-- If the GIF exists in /assets, it will display over the marker -->
+      <a-image src="url(assets/thembeka.gif)"
+               rotation="-90 0 0"
+               width="1.2" height="1.6"
+               position="0 0 0.02">
+      </a-image>
+
+      <!-- 3) OPTIONAL: MP4 VIDEO (more reliable on iPhone than WebM)
+           When you have /assets/thembeka.mp4, UNCOMMENT this block and remove the GIF block above.
+           Also keep videos muted for iOS autoplay; use an on-screen “Start” later for audio narration. -->
+      <!--
       <a-assets>
-        <!-- Your video (WebM first). playsinline attributes help on iOS -->
-        <video id="vidWebm" src="assets/thembeka.webm"
-               loop playsinline webkit-playsinline muted crossorigin="anonymous"></video>
-        <!-- Optional MP4 fallback if you export one later -->
-        <video id="vidMp4" src="assets/thembeka.mp4"
-               loop playsinline webkit-playsinline muted crossorigin="anonymous"></video>
-
-        <!-- Narration (will unmute only after user taps Start) -->
-        <audio id="voice" src="assets/thembeka.mp3" preload="auto" playsinline webkit-playsinline></audio>
+        <video id="clip" src="assets/thembeka.mp4" loop playsinline webkit-playsinline muted></video>
       </a-assets>
+      <a-video src="#clip"
+               rotation="-90 0 0"
+               width="1.2" height="1.6"
+               position="0 0 0.02">
+      </a-video>
+      -->
 
-      <!-- Marker: HIRO -->
-      <a-marker preset="hiro" id="marker" emitevents="true">
-        <!-- Debug plane so you can see tracking even if video fails -->
-        <a-plane id="debugPlane" color="#ff4444" rotation="-90 0 0" width="0.8" height="0.5" position="0 0 0.01"></a-plane>
+      <!-- Lights (not required for 2D, harmless to keep) -->
+      <a-entity light="type: ambient; intensity: 1"></a-entity>
+      <a-entity light="type: directional; intensity: 0.6" position="1 2 1"></a-entity>
+    </a-marker>
 
-        <!-- Video surface (we'll bind src via JS to whichever plays) -->
-        <a-video id="videoPlane"
-                 rotation="-90 0 0"
-                 width="1.2" height="1.6"
-                 position="0 0 0"
-                 visible="false">
-        </a-video>
-
-        <!-- Some light for good measure (mainly affects 3D, harmless here) -->
-        <a-entity light="type: ambient; intensity: 1"></a-entity>
-        <a-entity light="type: directional; intensity: 0.6" position="1 2 1"></a-entity>
-      </a-marker>
-
-      <a-entity camera></a-entity>
-    </a-scene>
-
-    <script>
-      const start   = document.getElementById('start');
-      const startBtn= document.getElementById('startBtn');
-
-      const marker  = document.getElementById('marker');
-      const debugPlane = document.getElementById('debugPlane');
-      const videoPlane = document.getElementById('videoPlane');
-
-      const vidWebm = document.getElementById('vidWebm');
-      const vidMp4  = document.getElementById('vidMp4');   // optional
-      const voice   = document.getElementById('voice');
-
-      let chosenVideo = null;
-
-      // Try WebM first; if it can't play, we’ll fall back to MP4 if present
-      function chooseVideo() {
-        const canWebm = vidWebm.canPlayType('video/webm; codecs="vp9"') || vidWebm.canPlayType('video/webm');
-        if (canWebm) { chosenVideo = vidWebm; return; }
-
-        // Fallback to MP4 if you’ve exported one
-        const canMp4 = vidMp4 && vidMp4.canPlayType('video/mp4');
-        if (canMp4) { chosenVideo = vidMp4; return; }
-
-        // Last resort: still no playable video
-        chosenVideo = null;
-      }
-
-      chooseVideo();
-
-      // iOS requires a user gesture before play() will work
-      startBtn.addEventListener('click', async () => {
-        start.style.display = 'none';
-
-        // Warm-up: try to "prime" media so later play() calls work
-        try { if (chosenVideo) { await chosenVideo.play(); chosenVideo.pause(); chosenVideo.currentTime = 0; } } catch(e) {}
-        try { await voice.play(); voice.pause(); voice.currentTime = 0; } catch(e) {}
-      });
-
-      // When the marker is found, show the content and play media
-      marker.addEventListener('markerFound', async () => {
-        console.log('HIRO marker found');
-
-        // Always show the debug plane so you know tracking works
-        debugPlane.setAttribute('visible', 'true');
-
-        if (chosenVideo) {
-          // Set <a-video> source dynamically
-          videoPlane.setAttribute('src', '#' + chosenVideo.id);
-          videoPlane.setAttribute('visible', 'true');
-
-          try { await chosenVideo.play(); } catch(e) {
-            console.log('Video autoplay blocked. Tap Start first or tap screen once.');
-          }
-        } else {
-          console.warn('No playable video source. Add MP4 fallback if needed.');
-        }
-
-        try { await voice.play(); } catch(e) {
-          console.log('Audio autoplay blocked. Tap Start first or tap screen once.');
-        }
-      });
-
-      // When marker is lost, hide content and reset media
-      marker.addEventListener('markerLost', () => {
-        console.log('HIRO marker lost');
-        videoPlane.setAttribute('visible', 'false');
-        debugPlane.setAttribute('visible', 'false');
-
-        if (chosenVideo) {
-          chosenVideo.pause();
-          chosenVideo.currentTime = 0;
-        }
-        voice.pause();
-        voice.currentTime = 0;
-      });
-    </script>
-  </body>
+    <a-entity camera></a-entity>
+  </a-scene>
+</body>
 </html>
