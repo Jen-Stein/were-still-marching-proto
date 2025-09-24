@@ -2,7 +2,7 @@
 <html>
 <head>
   <meta charset="utf-8" />
-  <title>AR.js — HIRO (Camera + Seam Fix + Tuning)</title>
+  <title>AR.js — HIRO (Camera + Seam Fix)</title>
   <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 
   <!-- A-Frame + AR.js -->
@@ -12,42 +12,59 @@
   <style>
     html, body { margin:0; height:100%; width:100%; overflow:hidden; background:#000; font-family:system-ui, Arial, sans-serif; }
 
-    /* Camera BELOW canvas; slight overscan to kill right-edge line */
-    video#arjs-video, video.arjs-video, video[playsinline]{
-      position:fixed !important;
-      top:0; left:-3px;                             /* overscan */
-      width:calc(100vw + 6px) !important;           /* overscan */
-      height:100vh !important;
-      object-fit:cover !important;
-      z-index:0 !important;                         /* BELOW */
-      background:#000;
-      pointer-events:none;
-      visibility:visible !important; opacity:1 !important; display:block !important;
+    /* Camera video BELOW canvas; overscan to kill right-edge line */
+    video#arjs-video,
+    video.arjs-video,
+    video[playsinline] {
+      position: fixed !important;
+      top: 0; left: -10px !important;              /* overscan */
+      width: calc(100vw + 20px) !important;        /* overscan */
+      height: 100vh !important;
+      object-fit: cover !important;
+      z-index: -2 !important;                      /* BELOW canvas */
+      background: #000 !important;
+      pointer-events: none !important;
+      transform: none !important;
+      opacity: 1 !important; visibility: visible !important; display: block !important;
     }
 
-    /* WebGL canvas ABOVE video — transparent because renderer alpha:true */
-    canvas.a-canvas, .a-canvas canvas{
-      position:fixed !important;
-      top:0; left:-3px;                             /* match overscan */
-      width:calc(100vw + 6px) !important;
-      height:100vh !important;
-      z-index:1 !important;                         /* ABOVE */
-      display:block !important;
-      pointer-events:none;
-      background:transparent !important;
+    /* WebGL canvas ABOVE video and transparent */
+    canvas.a-canvas,
+    .a-canvas canvas,
+    a-scene canvas {
+      position: fixed !important;
+      top: 0; left: -10px !important;              /* match overscan */
+      width: calc(100vw + 20px) !important;
+      height: 100vh !important;
+      z-index: 0 !important;                       /* ABOVE video */
+      display: block !important;
+      pointer-events: none !important;
+      background: transparent !important;
+      transform: none !important;
     }
 
-    a-scene{
-      position:fixed !important; inset:0 !important;
-      width:100vw !important; height:100vh !important;
-      background:transparent !important;
+    a-scene {
+      position: fixed !important; inset: 0 !important;
+      width: 100vw !important; height: 100vh !important;
+      background: transparent !important;
     }
 
-    /* Start overlay to unlock camera */
-    #gate{position:fixed; inset:0; z-index:10; display:flex; align-items:center; justify-content:center; flex-direction:column; background:rgba(0,0,0,.88); color:#fff; padding:24px; text-align:center}
-    #gate button{padding:12px 22px; font-size:18px; border-radius:8px; border:none; background:#ff6b6b; color:#fff}
+    /* Start overlay */
+    #gate {
+      position: fixed; inset: 0; z-index: 10;
+      display: flex; align-items: center; justify-content: center; flex-direction: column;
+      background: rgba(0,0,0,.88); color: #fff; padding: 24px; text-align: center;
+    }
+    #gate button {
+      padding: 12px 22px; font-size: 18px; border-radius: 8px; border: none;
+      background: #ff6b6b; color: #fff;
+    }
 
-    #status{position:fixed; left:8px; bottom:8px; z-index:20; background:rgba(0,0,0,.6); color:#0f0; padding:6px 8px; border-radius:6px; font:12px/1.3 monospace}
+    #status {
+      position: fixed; left: 8px; bottom: 8px; z-index: 20;
+      background: rgba(0,0,0,.6); color: #0f0;
+      padding: 6px 8px; border-radius: 6px; font: 12px/1.3 monospace;
+    }
   </style>
 </head>
 <body>
@@ -64,7 +81,7 @@
     renderer="antialias:true; alpha:true; precision:mediump"
     arjs="sourceType:webcam; facingMode:environment; detectionMode:mono; debugUIEnabled:true; patternRatio:0.5"
   >
-    <!-- 🔸 HIRO ONLY (make sure barcode block is not present anywhere else) -->
+    <!-- HIRO marker only -->
     <a-marker type="pattern" id="marker" emitevents="true"
               url="https://raw.githubusercontent.com/jeromeetienne/AR.js/master/three.js/examples/marker-training/examples/pattern-files/pattern-hiro.patt">
       <a-box id="cube" position="0 1 0" width="2" height="2" depth="2"
@@ -77,68 +94,84 @@
   </a-scene>
 
   <script>
-    const st    = document.getElementById('status');
-    const gate  = document.getElementById('gate');
-    const start = document.getElementById('start');
+    const st     = document.getElementById('status');
+    const gate   = document.getElementById('gate');
+    const start  = document.getElementById('start');
+    const marker = document.getElementById('marker');
+    const cube   = document.getElementById('cube');
+    const pad    = document.getElementById('pad');
 
-    const marker= document.getElementById('marker');
-    const cube  = document.getElementById('cube');
-    const pad   = document.getElementById('pad');
-
-    // Transparent clear (safety with alpha:true)
-    function forceTransparentClear(){
+    // Force transparent clear on the renderer
+    function forceTransparentClear() {
       const sceneEl = document.querySelector('a-scene');
-      const tryIt = () => {
-        if (!sceneEl || !sceneEl.renderer) return false;
-        sceneEl.renderer.setClearColor(0x000000, 0);
-        if (sceneEl.renderer.getContext) {
-          const gl = sceneEl.renderer.getContext();
-          try { gl.clearColor(0,0,0,0); } catch(_) {}
-        }
-        return true;
-      };
-      const t = setInterval(()=>{ if (tryIt()) clearInterval(t); }, 50);
-      setTimeout(()=>clearInterval(t), 3000);
-    }
-
-    // Ensure the AR.js <video> plays & is visible
-    function getCamVideo(){
-      return document.querySelector('video#arjs-video, video.arjs-video, video[playsinline]');
-    }
-    async function ensureCameraPlaying(){
-      const v = getCamVideo(); if (!v) return false;
+      if (!sceneEl || !sceneEl.renderer) return false;
       try {
-        v.setAttribute('playsinline',''); v.setAttribute('webkit-playsinline','');
-        v.muted = true;  // autoplay after permission
-        await v.play();
-        Object.assign(v.style, {
-          visibility:'visible', opacity:'1', display:'block',
-          position:'fixed', top:'0px', left:'-3px',
-          width:'calc(100vw + 6px)', height:'100vh', objectFit:'cover', zIndex:'0'
-        });
-        return true;
-      } catch(e){ console.log('Camera play failed:', e); return false; }
+        sceneEl.renderer.setClearColor(0x000000, 0);
+        const gl = sceneEl.renderer.getContext && sceneEl.renderer.getContext();
+        if (gl && gl.clearColor) gl.clearColor(0, 0, 0, 0);
+      } catch(_) {}
+      return true;
     }
 
-    const mo = new MutationObserver(async () => {
-      const ok = await ensureCameraPlaying();
-      if (ok) st.textContent = 'Camera ready. Point at the printed HIRO…';
-    });
-    mo.observe(document.documentElement, {subtree:true, childList:true});
+    // Enforce video/canvas layers
+    function enforceLayers() {
+      const vid = document.querySelector('video#arjs-video, video.arjs-video, video[playsinline]');
+      const cvs = document.querySelector('canvas.a-canvas, .a-canvas canvas, a-scene canvas');
+      const apply = el => {
+        if (!el) return;
+        el.style.position = 'fixed';
+        el.style.top = '0px';
+        el.style.left = '-10px';
+        el.style.width = 'calc(100vw + 20px)';
+        el.style.height = '100vh';
+        el.style.objectFit = 'cover';
+        el.style.transform = 'none';
+      };
+      if (vid) {
+        apply(vid);
+        vid.style.zIndex = '-2';
+        vid.style.pointerEvents = 'none';
+        vid.style.opacity = '1';
+        vid.style.visibility = 'visible';
+        vid.setAttribute('playsinline',''); vid.setAttribute('webkit-playsinline','');
+        try { vid.muted = true; vid.play().catch(()=>{}); } catch(_){}
+      }
+      if (cvs) {
+        apply(cvs);
+        cvs.style.zIndex = '0';
+        cvs.style.background = 'transparent';
+        cvs.style.pointerEvents = 'none';
+      }
+    }
 
+    // Try a few times on load
+    let tries = 0;
+    const tick = setInterval(() => {
+      forceTransparentClear();
+      enforceLayers();
+      if (++tries > 60) clearInterval(tick); // ~3s
+    }, 50);
+
+    // Also fix on resize/orientation and DOM changes
+    addEventListener('resize', enforceLayers);
+    addEventListener('orientationchange', () => setTimeout(enforceLayers, 300));
+    new MutationObserver(() => { enforceLayers(); }).observe(document.documentElement, {subtree:true, childList:true});
+
+    // Start overlay
     start.addEventListener('click', async ()=>{
       gate.style.display = 'none';
-      forceTransparentClear();
       st.textContent = 'Starting camera…';
-      await ensureCameraPlaying();
-      setTimeout(ensureCameraPlaying, 300);
-      setTimeout(ensureCameraPlaying, 1000);
+      forceTransparentClear();
+      enforceLayers();
+      setTimeout(enforceLayers, 300);
+      setTimeout(enforceLayers, 1000);
     });
 
+    // Marker events
     marker.addEventListener('markerFound', ()=>{
       cube.setAttribute('visible','true');
       pad.setAttribute('visible','true');
-      st.textContent = 'HIRO FOUND ✅ (use debug sliders if it drops)';
+      st.textContent = 'HIRO FOUND ✅';
     });
     marker.addEventListener('markerLost', ()=>{
       cube.setAttribute('visible','false');
