@@ -1,0 +1,165 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>AR.js — Camera Unlock + Layer Fix</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+
+  <!-- A-Frame + AR.js -->
+  <script src="https://aframe.io/releases/1.2.0/aframe.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/gh/AR-js-org/AR.js@3.3.2/aframe/build/aframe-ar.min.js"></script>
+
+  <style>
+    html, body { margin:0; height:100%; width:100%; overflow:hidden; background:#000; font-family:system-ui, Arial, sans-serif; }
+
+    /* Camera video BELOW the canvas (we will attach this style via JS too) */
+    video#arjs-video, video.arjs-video, video[playsinline]{
+      position:fixed !important;
+      top:0; left:0;
+      width:100vw !important; height:100vh !important;
+      object-fit:cover !important;
+      z-index:0 !important;               /* BELOW */
+      background:#000;
+      pointer-events:none;
+      visibility:visible !important;
+      opacity:1 !important;
+      display:block !important;
+    }
+
+    /* WebGL canvas ABOVE video — transparent because renderer alpha:true */
+    canvas.a-canvas, .a-canvas canvas{
+      position:fixed !important;
+      top:0; left:0;
+      width:100vw !important; height:100vh !important;
+      z-index:1 !important;               /* ABOVE */
+      display:block !important;
+      pointer-events:none;
+      background: transparent !important;
+    }
+
+    a-scene{
+      position:fixed !important;
+      inset:0 !important;
+      width:100vw !important; height:100vh !important;
+      background: transparent !important;
+    }
+
+    #gate{
+      position:fixed; inset:0; z-index:10;
+      display:flex; align-items:center; justify-content:center; flex-direction:column;
+      background:rgba(0,0,0,.88); color:#fff; padding:24px; text-align:center;
+    }
+    #gate button{
+      padding:12px 22px; font-size:18px; border-radius:8px; border:none; background:#ff6b6b; color:#fff;
+    }
+
+    #status{
+      position:fixed; left:8px; bottom:8px; z-index:20;
+      background:rgba(0,0,0,.6); color:#0f0; padding:6px 8px; border-radius:6px; font:12px/1.3 monospace;
+    }
+  </style>
+</head>
+<body>
+  <div id="gate">
+    <h2>Tap Start</h2>
+    <p>Allow the camera, then point at the printed marker.</p>
+    <button id="start">Start</button>
+  </div>
+  <div id="status">loading…</div>
+
+  <a-scene
+    embedded
+    vr-mode-ui="enabled:false"
+
+    <!-- IMPORTANT: alpha:true makes the canvas transparent over the video -->
+    renderer="antialias:true; alpha:true; precision:mediump"
+
+    arjs="sourceType:webcam; facingMode:environment; detectionMode:mono; debugUIEnabled:false"
+  >
+    <!-- Use BARCODE #5 first (you saw detection here before) -->
+    <a-marker type="barcode" value="5" id="marker" emitevents="true">
+      <a-box id="cube"
+             position="0 1 0"
+             width="2" height="2" depth="2"
+             material="color:#FF00FF; shader:flat"
+             visible="false"></a-box>
+    </a-marker>
+
+    <!-- If you want HIRO instead, comment out the barcode marker above and UNcomment this:
+    <a-marker type="pattern" emitevents="true"
+              url="https://raw.githubusercontent.com/jeromeetienne/AR.js/master/three.js/examples/marker-training/examples/pattern-files/pattern-hiro.patt">
+      <a-box id="cube" position="0 1 0" width="2" height="2" depth="2"
+             material="color:#FF00FF; shader:flat" visible="false"></a-box>
+    </a-marker>
+    -->
+
+    <a-entity camera></a-entity>
+  </a-scene>
+
+  <script>
+    const st    = document.getElementById('status');
+    const gate  = document.getElementById('gate');
+    const start = document.getElementById('start');
+    const marker= document.getElementById('marker');
+    const cube  = document.getElementById('cube');
+
+    // Helper: find AR.js video and force it to play + be visible
+    function getCamVideo(){
+      return document.querySelector('video#arjs-video, video.arjs-video, video[playsinline]');
+    }
+    async function ensureCameraPlaying(){
+      const v = getCamVideo();
+      if (!v) return false;
+      try {
+        v.setAttribute('playsinline','');
+        v.setAttribute('webkit-playsinline','');
+        v.muted = true;        // allow autoplay on iOS
+        await v.play();        // start stream
+        // force styling in case AR.js applied odd defaults
+        v.style.visibility = 'visible';
+        v.style.opacity = '1';
+        v.style.display = 'block';
+        v.style.position = 'fixed';
+        v.style.top = '0px';
+        v.style.left = '0px';
+        v.style.width = '100vw';
+        v.style.height = '100vh';
+        v.style.objectFit = 'cover';
+        v.style.zIndex = 0;
+        return true;
+      } catch (e) {
+        console.log('Camera play failed:', e);
+        return false;
+      }
+    }
+
+    // Watch the DOM for when AR.js injects the video, then style/play it
+    const mo = new MutationObserver(async () => {
+      const ok = await ensureCameraPlaying();
+      if (ok) { st.textContent = 'Camera ready. Point at the printed barcode #5…'; }
+    });
+    mo.observe(document.documentElement, {subtree:true, childList:true});
+
+    // Start button: user gesture to unlock autoplay policies
+    start.addEventListener('click', async ()=>{
+      gate.style.display = 'none';
+      // try immediately (in case the video is already injected)
+      await ensureCameraPlaying();
+      st.textContent = 'Trying camera… if you see black, wait 1–2s.';
+      // re-try a couple times (devices can be slow)
+      setTimeout(ensureCameraPlaying, 400);
+      setTimeout(ensureCameraPlaying, 1000);
+    });
+
+    // Marker events
+    marker.addEventListener('markerFound', ()=>{
+      cube.setAttribute('visible','true');
+      st.textContent = 'MARKER FOUND ✅ (you should see cube AND the camera feed)';
+    });
+    marker.addEventListener('markerLost', ()=>{
+      cube.setAttribute('visible','false');
+      st.textContent = 'Point at the printed marker…';
+    });
+  </script>
+</body>
+</html>
