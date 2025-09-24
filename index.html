@@ -2,30 +2,28 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
   <title>We’re Still Marching — AR Test</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no"/>
 
-  <!-- A-Frame (same version that works for your friend) -->
+  <!-- A-Frame (stable) -->
   <script src="https://aframe.io/releases/1.2.0/aframe.min.js"></script>
-  <!-- AR.js for A-Frame -->
+  <!-- AR.js for A-Frame (marker-based) -->
   <script src="https://cdn.jsdelivr.net/gh/AR-js-org/AR.js/aframe/build/aframe-ar.js"></script>
 
   <style>
-    /* reset + no scroll */
-    html, body { margin:0; height:100%; overflow:hidden; background:#000; font-family:Arial, sans-serif; }
+    html, body { margin:0; height:100%; overflow:hidden; background:#000; font-family:Arial,sans-serif; }
 
-    /* make the camera video truly full-screen behind the canvas */
+    /* Make camera video truly full-screen behind the canvas */
     #arjs-video, video#arjs-video, video[playsinline] {
       position: fixed !important;
-      inset: 0 !important;                 /* fills all sides (fixes right-side line) */
+      inset: 0 !important;
       width: 100% !important;
       height: 100% !important;
-      object-fit: cover !important;        /* cover the whole screen */
+      object-fit: cover !important;
       z-index: 0 !important;
       background: #000;
     }
-
-    /* keep the WebGL canvas on top and transparent */
+    /* Keep the WebGL canvas on top and transparent */
     a-scene, .a-canvas, canvas {
       position: fixed !important;
       inset: 0 !important;
@@ -34,20 +32,17 @@
       background: transparent !important;
       z-index: 1 !important;
     }
-
-    .ui {
-      position: absolute; top: 12px; left: 12px; z-index: 2;
-      background: rgba(255,255,255,0.9); padding:8px 10px; border-radius:6px;
-      font-size:14px; color:#111;
+    /* Tiny sound unlock button (only shown if needed) */
+    #soundUnlock {
+      position: fixed; bottom: 14px; left: 50%; transform: translateX(-50%);
+      z-index: 3; background: rgba(0,0,0,0.7); color:#fff; border:1px solid #fff;
+      padding: 10px 14px; border-radius: 8px; font-size: 14px; display:none;
     }
   </style>
 </head>
 <body>
-  <div class="ui">
-    1) Allow camera access<br>
-    2) Point at printed <b>Hiro</b> marker<br>
-    3) You should see the character floating above the marker
-  </div>
+
+  <button id="soundUnlock">🔊 Tap to enable sound</button>
 
   <a-scene
     embedded
@@ -55,31 +50,38 @@
     renderer="alpha:true; antialias:true"
     arjs="sourceType: webcam; debugUIEnabled:false">
 
+    <a-assets>
+      <!-- 2D character art (GIF works like a poster; later you can switch to MP4) -->
+      <img id="thembekaImg" src="assets/thembeka.gif" crossorigin="anonymous" alt=""/>
+      <!-- Audio narration -->
+      <audio id="thembekaAudio" src="assets/thembeka.mp3" preload="auto" playsinline webkit-playsinline></audio>
+
+      <!-- (Optional) If you export video later, use this instead:
+      <video id="thembekaVideo" src="assets/thembeka.mp4" loop playsinline webkit-playsinline muted></video>
+      -->
+    </a-assets>
+
     <!-- HIRO marker -->
-    <a-marker preset="hiro" emitevents="true">
+    <a-marker preset="hiro" id="marker" emitevents="true">
+      <!-- BIG + FLOATING: position y = 1.2m above marker; width/height ~2.2m x 2.9m -->
+      <a-image id="thembekaPoster"
+               src="#thembekaImg"
+               rotation="-90 0 0"
+               position="0 1.2 0"
+               width="2.2" height="2.9"
+               visible="false">
+      </a-image>
 
-      <!-- OPTION A: GIF (shows as a static image on some phones; okay for now) -->
-      <a-image
-        src="url(assets/thembeka.gif)"
-        rotation="-90 0 0"
-        position="0 0.15 0"       <!-- hover 35 cm above marker -->
-        width="5.8" height="7.4"  <!-- bigger footprint -->
-        ></a-image>
-
-      <!-- OPTION B: MP4 video (uncomment when you have thembeka.mp4) -->
-      <!--
-      <a-assets>
-        <video id="thembekaVideo" src="assets/thembeka.mp4" loop playsinline webkit-playsinline muted></video>
-      </a-assets>
-      <a-video
-        src="#thembekaVideo"
-        rotation="-90 0 0"
-        position="0 0.35 0"
-        width="1.8" height="2.4"
-        ></a-video>
+      <!-- If you switch to MP4 later, replace the <a-image> with:
+      <a-video id="thembekaPoster"
+               src="#thembekaVideo"
+               rotation="-90 0 0"
+               position="0 1.2 0"
+               width="2.2" height="2.9"
+               visible="false"></a-video>
       -->
 
-      <!-- lights (harmless for 2D, useful if you add 3D later) -->
+      <!-- lights (harmless for 2D, useful for 3D later) -->
       <a-entity light="type: ambient; intensity: 1"></a-entity>
       <a-entity light="type: directional; intensity: 0.6" position="1 2 1"></a-entity>
     </a-marker>
@@ -88,7 +90,7 @@
   </a-scene>
 
   <script>
-    // safety: if AR.js injects the video late, re-apply styles
+    // Keep camera video styled even if AR.js injects late
     (function ensureCamVisible(){
       function styleCam(v){
         if(!v) return;
@@ -98,14 +100,50 @@
           objectFit:'cover', zIndex:'0', background:'#000'
         });
         v.setAttribute('playsinline',''); v.setAttribute('webkit-playsinline','');
-        v.muted = true;
+        v.muted = true; // (video element only – harmless)
       }
       styleCam(document.querySelector('#arjs-video'));
       setTimeout(()=>styleCam(document.querySelector('#arjs-video')), 800);
     })();
+
+    const marker        = document.querySelector('#marker');
+    const poster        = document.querySelector('#thembekaPoster');
+    const audioEl       = document.querySelector('#thembekaAudio');
+    const soundUnlock   = document.querySelector('#soundUnlock');
+
+    // Attempt to prime audio on first touch anywhere (helps iOS)
+    let soundPrimed = false;
+    function primeSound() {
+      if (soundPrimed) return;
+      audioEl.play().then(()=> {
+        audioEl.pause();
+        audioEl.currentTime = 0;
+        soundPrimed = true;
+        soundUnlock.style.display = 'none';
+      }).catch(()=>{
+        // still blocked; show unlock button
+        soundUnlock.style.display = 'block';
+      });
+    }
+    document.addEventListener('touchstart', primeSound, {once:false});
+    document.addEventListener('click',       primeSound, {once:false});
+    soundUnlock.addEventListener('click',    primeSound);
+
+    // Show art + play/pause audio with the marker
+    marker.addEventListener('markerFound', () => {
+      poster.setAttribute('visible','true');
+      // try to play
+      audioEl.play().catch(()=>{
+        // show the unlock prompt if blocked
+        soundUnlock.style.display = 'block';
+      });
+    });
+
+    marker.addEventListener('markerLost', () => {
+      poster.setAttribute('visible','false');
+      audioEl.pause();
+      audioEl.currentTime = 0;
+    });
   </script>
 </body>
 </html>
-
-
-
