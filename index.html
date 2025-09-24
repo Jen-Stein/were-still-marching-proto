@@ -2,80 +2,99 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <title>We’re Still Marching — Thembeka Test</title>
+  <title>We're Still Marching — Prototype</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
 
-  <!-- A-Frame 1.2.0 (same as your friend) -->
+  <!-- A-Frame -->
   <script src="https://aframe.io/releases/1.2.0/aframe.min.js"></script>
-  <!-- AR.js (non-min) matching your friend's include -->
+  <!-- AR.js for A-Frame (marker-based) -->
   <script src="https://cdn.jsdelivr.net/gh/AR-js-org/AR.js/aframe/build/aframe-ar.js"></script>
+  <!-- Chroma key shader -->
+  <script src="https://unpkg.com/aframe-chromakey-material/dist/aframe-chromakey-material.min.js"></script>
 
   <style>
-    html, body { height:100%; margin:0; overflow:hidden; background:#000; font-family: Arial, sans-serif; }
-    .ui {
-      position: absolute; top: 12px; left: 12px; z-index: 10;
-      background: rgba(255,255,255,0.92); padding:8px 10px; border-radius:6px;
-      font-size:14px; color:#111; max-width: 80vw;
+    html, body { margin:0; height:100%; background:#000; color:#fff; font-family: Arial, sans-serif; }
+    /* help camera fill screen on mobile */
+    a-scene, .a-canvas { position:fixed !important; inset:0 !important; width:100vw !important; height:100vh !important; }
+
+    #start-screen {
+      position: fixed; inset: 0; display:flex; align-items:center; justify-content:center;
+      background: rgba(0,0,0,0.9); z-index: 9999; flex-direction: column; text-align:center; padding: 24px;
     }
-    /* Help iOS fill the screen */
-    canvas.a-canvas, a-scene, .a-canvas { width:100% !important; height:100% !important; }
-    /* Make GIF edges clean if it has alpha */
-    .flat { material: shader: flat; transparent: true; alphaTest: 0.01; }
+    #start-screen h2 { margin: 0 0 10px 0; font-weight: 600; }
+    #start-screen button {
+      padding: 12px 22px; font-size: 18px; border-radius: 8px; border: none; background:#ff6b6b; color:#fff; cursor:pointer;
+    }
+    #hint { margin-top: 10px; font-size: 14px; color:#ddd; max-width: 360px; }
   </style>
 </head>
 <body>
-  <div class="ui">
-    1) Allow camera access<br>
-    2) Point at printed <b>HIRO</b> marker<br>
-    3) Tap screen once if audio is blocked
+
+  <!-- Unlocks audio/video on iOS -->
+  <div id="start-screen">
+    <h2>We're Still Marching — Prototype</h2>
+    <button id="start-button">Start the Experience</button>
+    <div id="hint">Allow camera access, then point your phone at the printed <b>Hiro</b> marker.</div>
   </div>
 
-  <a-scene embedded arjs="sourceType: webcam; debugUIEnabled: false;">
-    <!-- Preload assets (MUST match filenames in /assets) -->
+  <a-scene
+    embedded
+    vr-mode-ui="enabled: false"
+    renderer="antialias:true"
+    arjs="sourceType: webcam; debugUIEnabled: false; trackingMethod: best; patternRatio: 0.9">
+
     <a-assets>
-      <img id="thembekaGif" src="assets/thembeka.gif" crossorigin="anonymous">
+      <!-- Provide both formats (MP4 for iPhone/Safari, WebM for Chrome/Android) -->
+      <video id="thembekaVideo" preload="auto" loop playsinline webkit-playsinline crossorigin="anonymous">
+        <source src="assets/thembeka.webm" type="video/webm">
+        <source src="assets/thembeka.mp4"  type="video/mp4">
+      </video>
       <audio id="thembekaAudio" src="assets/thembeka.mp3" preload="auto" playsinline webkit-playsinline></audio>
     </a-assets>
 
-    <!-- Marker: HIRO -->
-    <a-marker preset="hiro" id="markerThembeka">
-      <!-- Simple lighting is harmless even for 2D images -->
-      <a-entity light="type: ambient; intensity: 1"></a-entity>
-
-      <!-- Show a pink box FIRST to prove tracking; comment it out after -->
-      <!-- <a-box color="#FF6B6B" depth="0.4" height="0.4" width="0.4" position="0 0.2 0" rotation="-90 0 0"></a-box> -->
-
-      <!-- Your animated 2D character (GIF) -->
-      <a-image id="thembekaPlane"
-               src="#thembekaGif"
-               position="0 0 0"
-               rotation="-90 0 0"
+    <!-- Marker: Hiro -->
+    <a-marker preset="hiro" id="marker-thembeka" emitevents="true">
+      <!-- We render a plane and apply the chroma key shader to the video texture -->
+      <a-plane id="thembekaPlane"
                width="1.2" height="1.6"
-               visible="true"
-               material="shader: flat; transparent: true; alphaTest: 0.01">
-      </a-image>
+               rotation="-90 0 0" position="0 0 0"
+               visible="false"
+               material="shader: chromakey; src: #thembekaVideo; color: 0 1 0; threshold: 0.38; slope: 0.1">
+      </a-plane>
     </a-marker>
 
     <a-entity camera></a-entity>
   </a-scene>
 
   <script>
-    const marker = document.querySelector('#markerThembeka');
-    const audio  = document.querySelector('#thembekaAudio');
+    const startBtn    = document.querySelector('#start-button');
+    const startScreen = document.querySelector('#start-screen');
+    const videoEl     = document.querySelector('#thembekaVideo');
+    const audioEl     = document.querySelector('#thembekaAudio');
+    const planeEl     = document.querySelector('#thembekaPlane');
+    const markerEl    = document.querySelector('#marker-thembeka');
 
-    // iOS often needs a user tap before audio can play.
-    document.addEventListener('touchend', () => {
-      if (audio.paused) { audio.play().catch(()=>{}); }
-    }, {once:true});
-
-    marker.addEventListener('markerFound', () => {
-      // Try to play on marker found; if blocked, one tap will unlock it.
-      audio.play().catch(()=>{ /* user can tap once to start */ });
+    // 1) Require user gesture so audio/video can play on iOS
+    startBtn.addEventListener('click', async () => {
+      try { await audioEl.play(); audioEl.pause(); audioEl.currentTime = 0; } catch(e) {}
+      try { await videoEl.play(); videoEl.pause(); videoEl.currentTime = 0; } catch(e) {}
+      startScreen.style.display = 'none';
     });
 
-    marker.addEventListener('markerLost', () => {
-      audio.pause();
-      audio.currentTime = 0;
+    // 2) On marker found: show plane and start video + audio
+    markerEl.addEventListener('markerFound', async () => {
+      planeEl.setAttribute('visible', 'true');
+      try { await videoEl.play(); } catch(e) { console.log('Video play blocked until Start tapped'); }
+      try { await audioEl.play(); } catch(e) { console.log('Audio play blocked until Start tapped'); }
+    });
+
+    // 3) On marker lost: hide and reset
+    markerEl.addEventListener('markerLost', () => {
+      planeEl.setAttribute('visible', 'false');
+      if (!videoEl.paused) videoEl.pause();
+      videoEl.currentTime = 0;
+      if (!audioEl.paused) audioEl.pause();
+      audioEl.currentTime = 0;
     });
   </script>
 </body>
