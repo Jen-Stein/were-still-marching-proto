@@ -101,7 +101,7 @@
       <!-- Upright, hovering above marker -->
       <a-video id="thembekaPoster"
                src="#thembekaVideo"
-               rotation="0 180 0"
+               rotation="0 -180 0"
                position="0 2 0"
                width="6.2" height="7.2"
                visible="false"></a-video>
@@ -194,9 +194,10 @@
     unlockBtn.addEventListener('click', () => {
       audioEl.play().then(()=>{
         unlockBtn.style.display = 'none';
-      }).catch(()=>{ /* if it still fails, leave the button visible */ });
+      }).catch(()=>{  });
     });
   </script>
 </body>
 </html>
+
 
