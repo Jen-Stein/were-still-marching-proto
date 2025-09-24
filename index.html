@@ -3,38 +3,41 @@
 <head>
   <meta charset="utf-8" />
   <title>We’re Still Marching — AR Test</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover"/>
 
-  <!-- A-Frame (stable) -->
+  <!-- A-Frame -->
   <script src="https://aframe.io/releases/1.2.0/aframe.min.js"></script>
   <!-- AR.js for A-Frame (marker-based) -->
   <script src="https://cdn.jsdelivr.net/gh/AR-js-org/AR.js/aframe/build/aframe-ar.js"></script>
 
   <style>
-    /* Fill the whole screen, hide scrollbars, black fallback */
-    html, body { margin:0; width:100%; height:100%; overflow:hidden; background:#000; font-family:Arial,sans-serif; }
-
-    /* Force the camera video to actually fill the screen behind WebGL */
+    html, body {
+      margin:0; padding:0;
+      width:100%; height:100%;
+      overflow:hidden; background:#000; font-family:Arial,sans-serif;
+    }
+    /* Force the camera video to truly fill the screen (fixes the right black strip on iPhone) */
     #arjs-video, video#arjs-video, video[playsinline] {
       position: fixed !important;
-      top: 0 !important; left: 0 !important;
-      width: 100vw !important; height: 100vh !important;
+      top: 0 !important; left: 0 !important; right: 0 !important; bottom: 0 !important;
+      width: 100vw !important;
+      height: 100vh !important;        /* fallback */
+      height: 100svh !important;       /* iOS/new browsers */
       object-fit: cover !important;
       z-index: 0 !important;
-      background: #000;
+      background: #000 !important;
     }
-
-    /* Put the A-Frame canvas on top and transparent */
+    /* WebGL canvas on top, transparent */
     a-scene, .a-canvas, canvas {
       position: fixed !important;
-      top: 0 !important; left: 0 !important;
-      width: 100vw !important; height: 100vh !important;
+      top: 0 !important; left: 0 !important; right: 0 !important; bottom: 0 !important;
+      width: 100vw !important;
+      height: 100vh !important;
+      height: 100svh !important;
       background: transparent !important;
       z-index: 1 !important;
-      image-rendering: auto !important;
     }
-
-    /* Tiny sound unlock button (only shown if iOS blocks autoplay) */
+    /* Small audio unlock button (shown if iOS blocks autoplay) */
     #soundUnlock {
       position: fixed; bottom: 14px; left: 50%; transform: translateX(-50%);
       z-index: 3; background: rgba(0,0,0,0.7); color:#fff; border:1px solid #fff;
@@ -53,38 +56,40 @@
     arjs="sourceType: webcam; debugUIEnabled:false">
 
     <a-assets>
-      <!-- Your 2D character art (animated GIF). If it doesn't animate on your device, you can later swap to MP4/WebM. -->
+      <!-- Your 2D character art (GIF or PNG). Swap to MP4/WebM later if you animate. -->
       <img id="thembekaImg" src="assets/thembeka.gif" crossorigin="anonymous" alt=""/>
       <!-- Audio narration -->
       <audio id="thembekaAudio" src="assets/thembeka.mp3" preload="auto" playsinline webkit-playsinline></audio>
 
-      <!-- (Optional) If you export to video later, use this instead:
+      <!-- (Optional later) If you export to video:
       <video id="thembekaVideo" src="assets/thembeka.mp4" loop playsinline webkit-playsinline muted></video>
       -->
     </a-assets>
 
-    <!-- Use the built-in HIRO marker -->
+    <!-- HIRO marker -->
     <a-marker preset="hiro" id="marker" emitevents="true">
-      <!-- Fix orientation: -90 around X lays it flat on the marker (head up, not upside down) -->
-      <!-- Size + Hover: increase width/height, raise Y to float above marker -->
+      <!-- UPRIGHT + HOVERING:
+           rotation: 0 180 0 = stand upright and face the camera
+           position: y = 1.4m above marker (raise/lower as you like)
+           size: width/height — increase carefully; very large planes can hurt tracking -->
       <a-image id="thembekaPoster"
                src="#thembekaImg"
-               rotation="-90 0 0"
-               position="0 5.5 0"
-               width="4.5" height="5.2"
+               rotation="0 180 0"
+               position="0 1.4 0"
+               width="1.1" height="1.6"
                visible="false">
       </a-image>
 
-      <!-- If you switch to MP4/WebM, replace the <a-image> with:
+      <!-- If you switch to video later (MP4/WebM), use:
       <a-video id="thembekaPoster"
                src="#thembekaVideo"
-               rotation="-90 0 0"
-               position="0 1.5 0"
-               width="2.5" height="3.2"
+               rotation="0 180 0"
+               position="0 1.4 0"
+               width="1.1" height="1.6"
                visible="false"></a-video>
       -->
 
-      <!-- lights (fine to keep, harmless for 2D; handy if you add any 3D later) -->
+      <!-- lights (optional; harmless for 2D, useful for 3D later) -->
       <a-entity light="type: ambient; intensity: 1"></a-entity>
       <a-entity light="type: directional; intensity: 0.6" position="1 2 1"></a-entity>
     </a-marker>
@@ -93,21 +98,22 @@
   </a-scene>
 
   <script>
-    // Ensure camera video takes over the screen even if AR.js injects late
+    // Ensure the injected camera video fills the whole screen even if AR.js attaches late
     (function ensureCamVisible(){
       function styleCam(v){
         if(!v) return;
         v.id = 'arjs-video';
         Object.assign(v.style, {
-          position:'fixed', top:'0', left:'0', width:'100vw', height:'100vh',
+          position:'fixed', top:'0', left:'0', width:'100vw',
+          height: (CSS && CSS.supports && CSS.supports('height: 100svh')) ? '100svh' : '100vh',
           objectFit:'cover', zIndex:'0', background:'#000'
         });
         v.setAttribute('playsinline',''); v.setAttribute('webkit-playsinline','');
         v.muted = true;
       }
-      // Try immediately, then again after AR.js attaches the video
       styleCam(document.querySelector('#arjs-video'));
-      setTimeout(()=>styleCam(document.querySelector('#arjs-video')), 800);
+      setTimeout(()=>styleCam(document.querySelector('#arjs-video')), 600);
+      setTimeout(()=>styleCam(document.querySelector('#arjs-video')), 1200);
     })();
 
     const marker      = document.querySelector('#marker');
@@ -115,7 +121,7 @@
     const audioEl     = document.querySelector('#thembekaAudio');
     const soundUnlock = document.querySelector('#soundUnlock');
 
-    // Prime audio on first touch/click (iOS needs a gesture)
+    // Prime audio on first touch/click (iOS needs a user gesture)
     let soundPrimed = false;
     function primeSound() {
       if (soundPrimed) return;
@@ -125,7 +131,6 @@
         soundPrimed = true;
         soundUnlock.style.display = 'none';
       }).catch(()=>{
-        // show the unlock prompt if still blocked
         soundUnlock.style.display = 'block';
       });
     }
@@ -133,7 +138,7 @@
     document.addEventListener('click',       primeSound, {once:false});
     soundUnlock.addEventListener('click',    primeSound);
 
-    // Show image + play/pause audio when the marker is seen/lost
+    // Show/hide + play/pause when the marker is seen/lost
     marker.addEventListener('markerFound', () => {
       poster.setAttribute('visible','true');
       audioEl.play().catch(()=>{ soundUnlock.style.display = 'block'; });
@@ -147,7 +152,3 @@
   </script>
 </body>
 </html>
-
-
-
-
