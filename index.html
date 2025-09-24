@@ -2,7 +2,7 @@
 <html>
 <head>
   <meta charset="utf-8" />
-  <title>AR.js — Camera + Seam Fix + Tuning</title>
+  <title>AR.js — HIRO (Camera + Seam Fix + Tuning)</title>
   <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 
   <!-- A-Frame + AR.js -->
@@ -53,7 +53,7 @@
 <body>
   <div id="gate">
     <h2>Tap Start</h2>
-    <p>Allow the camera, then point at your printed marker.</p>
+    <p>Allow the camera, then point at your printed <b>HIRO</b> marker.</p>
     <button id="start">Start</button>
   </div>
   <div id="status">loading…</div>
@@ -61,24 +61,10 @@
   <a-scene
     embedded
     vr-mode-ui="enabled:false"
-
-    <!-- alpha:true keeps canvas transparent so camera is visible -->
     renderer="antialias:true; alpha:true; precision:mediump"
-
-    <!-- debugUIEnabled:true gives you threshold/blockSize sliders on screen -->
     arjs="sourceType:webcam; facingMode:environment; detectionMode:mono; debugUIEnabled:true; patternRatio:0.5"
   >
-    <!-- CHOOSE ONE MARKER (uncomment only the one you are actually using) -->
-
-    <!-- 1) BARCODE #5 (looks like a QR) — if this is what you printed, keep this one: -->
-    <a-marker type="barcode" value="5" id="marker" emitevents="true">
-      <a-box id="cube" position="0 1 0" width="2" height="2" depth="2"
-             material="color:#FF00FF; shader:flat" visible="false"></a-box>
-      <a-plane id="pad" rotation="-90 0 0" width="2" height="2"
-               material="color:#FFFFFF; shader:flat; opacity:0.85" visible="false"></a-plane>
-    </a-marker>
-
-    <!-- 2) HIRO pattern — if you printed HIRO instead, comment the barcode marker above and UNcomment this:
+    <!-- 🔸 HIRO ONLY (make sure barcode block is not present anywhere else) -->
     <a-marker type="pattern" id="marker" emitevents="true"
               url="https://raw.githubusercontent.com/jeromeetienne/AR.js/master/three.js/examples/marker-training/examples/pattern-files/pattern-hiro.patt">
       <a-box id="cube" position="0 1 0" width="2" height="2" depth="2"
@@ -86,7 +72,6 @@
       <a-plane id="pad" rotation="-90 0 0" width="2" height="2"
                material="color:#FFFFFF; shader:flat; opacity:0.85" visible="false"></a-plane>
     </a-marker>
-    -->
 
     <a-entity camera></a-entity>
   </a-scene>
@@ -100,7 +85,7 @@
     const cube  = document.getElementById('cube');
     const pad   = document.getElementById('pad');
 
-    // Make the THREE/WebGL clear transparent (extra safety with alpha:true)
+    // Transparent clear (safety with alpha:true)
     function forceTransparentClear(){
       const sceneEl = document.querySelector('a-scene');
       const tryIt = () => {
@@ -116,7 +101,7 @@
       setTimeout(()=>clearInterval(t), 3000);
     }
 
-    // Ensure the AR.js <video> is playing & visible (some phones need this nudge)
+    // Ensure the AR.js <video> plays & is visible
     function getCamVideo(){
       return document.querySelector('video#arjs-video, video.arjs-video, video[playsinline]');
     }
@@ -124,7 +109,7 @@
       const v = getCamVideo(); if (!v) return false;
       try {
         v.setAttribute('playsinline',''); v.setAttribute('webkit-playsinline','');
-        v.muted = true;  // let it autoplay after permission
+        v.muted = true;  // autoplay after permission
         await v.play();
         Object.assign(v.style, {
           visibility:'visible', opacity:'1', display:'block',
@@ -135,14 +120,12 @@
       } catch(e){ console.log('Camera play failed:', e); return false; }
     }
 
-    // Observe DOM for injected video, then start it
     const mo = new MutationObserver(async () => {
       const ok = await ensureCameraPlaying();
-      if (ok) st.textContent = 'Camera ready. Point at the printed marker…';
+      if (ok) st.textContent = 'Camera ready. Point at the printed HIRO…';
     });
     mo.observe(document.documentElement, {subtree:true, childList:true});
 
-    // Start overlay
     start.addEventListener('click', async ()=>{
       gate.style.display = 'none';
       forceTransparentClear();
@@ -152,16 +135,15 @@
       setTimeout(ensureCameraPlaying, 1000);
     });
 
-    // Marker events
     marker.addEventListener('markerFound', ()=>{
       cube.setAttribute('visible','true');
       pad.setAttribute('visible','true');
-      st.textContent = 'MARKER FOUND ✅ (adjust threshold/blockSize if it drops)';
+      st.textContent = 'HIRO FOUND ✅ (use debug sliders if it drops)';
     });
     marker.addEventListener('markerLost', ()=>{
       cube.setAttribute('visible','false');
       pad.setAttribute('visible','false');
-      st.textContent = 'Point at the printed marker…';
+      st.textContent = 'Point at the printed HIRO…';
     });
   </script>
 </body>
