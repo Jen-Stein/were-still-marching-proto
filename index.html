@@ -2,37 +2,31 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <title>We’re Still Marching — AR Test</title>
+  <title>We’re Still Marching — AR Test (Stable)</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover"/>
 
   <!-- A-Frame -->
   <script src="https://aframe.io/releases/1.2.0/aframe.min.js"></script>
-  <!-- AR.js for A-Frame (marker-based) -->
+  <!-- AR.js for A-Frame -->
   <script src="https://cdn.jsdelivr.net/gh/AR-js-org/AR.js/aframe/build/aframe-ar.js"></script>
 
   <style>
-    /* Fill the screen, hide scrollbars, black fallback */
     html, body {
-      margin:0; padding:0;
-      width:100%; height:100%;
+      margin:0; padding:0; width:100%; height:100%;
       overflow:hidden; background:#000; font-family:Arial,sans-serif;
     }
-
-    /* Force camera video to truly fill the screen (removes right black strip on iOS) */
+    /* Make the camera video truly cover the screen */
     #arjs-video, video#arjs-video, video[playsinline] {
       position: fixed !important;
       top: 0 !important; left: 0 !important; right: 0 !important; bottom: 0 !important;
       width: 100vw !important;
-      height: 100vh !important;       /* fallback */
-      height: 100svh !important;      /* modern iOS */
+      height: 100vh !important;           /* fallback */
+      height: 100svh !important;          /* iOS new unit */
       object-fit: cover !important;
       z-index: 0 !important;
       background: #000 !important;
-      transform: translateZ(0) scale(1.02); /* tiny overscan to kill any edge line */
-      transform-origin: center center;
     }
-
-    /* WebGL canvas on top, transparent, also overscan to match video */
+    /* Put WebGL canvas above the camera */
     a-scene, .a-canvas, canvas {
       position: fixed !important;
       top: 0 !important; left: 0 !important; right: 0 !important; bottom: 0 !important;
@@ -41,11 +35,17 @@
       height: 100svh !important;
       background: transparent !important;
       z-index: 1 !important;
-      transform: translateZ(0) scale(1.02);
-      transform-origin: center center;
     }
-
-    /* Small audio unlock button (only shown if iOS blocks autoplay) */
+    /* Start overlay */
+    #start {
+      position: fixed; inset: 0;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      background: rgba(0,0,0,0.9); color:#fff; z-index: 3; text-align: center; padding: 24px;
+    }
+    #start button {
+      margin-top: 12px; padding: 12px 18px; font-size: 16px; border-radius: 8px;
+      border: 0; background: #ff6b6b; color: #fff;
+    }
     #soundUnlock {
       position: fixed; bottom: 14px; left: 50%; transform: translateX(-50%);
       z-index: 3; background: rgba(0,0,0,0.7); color:#fff; border:1px solid #fff;
@@ -55,6 +55,14 @@
 </head>
 <body>
 
+  <!-- Start (unlocks audio & primes video on iOS) -->
+  <div id="start">
+    <h2>We’re Still Marching — AR Prototype</h2>
+    <p>Tap Start, allow camera, then point at the printed <b>HIRO</b> marker.</p>
+    <button id="startBtn">Start</button>
+  </div>
+
+  <!-- Fallback prompt if iOS still blocks audio -->
   <button id="soundUnlock">🔊 Tap to enable sound</button>
 
   <a-scene
@@ -64,33 +72,41 @@
     arjs="sourceType: webcam; debugUIEnabled:false">
 
     <a-assets>
-      <!-- 2D character art (GIF/PNG). If you later switch to MP4/WebM, swap to <video>. -->
-      <img id="thembekaImg" src="assets/thembeka.gif" crossorigin="anonymous" alt=""/>
-      <!-- Audio narration -->
-      <audio id="thembekaAudio" src="assets/thembeka.mp3" preload="auto" playsinline webkit-playsinline></audio>
+      <!-- Video (muted, loops) -->
+      <video id="thembekaVideo"
+             src="assets/thembeka.mp4"
+             loop
+             playsinline
+             webkit-playsinline
+             muted></video>
 
-      <!-- (Optional later) If you export to video:
-      <video id="thembekaVideo" src="assets/thembeka.mp4" loop playsinline webkit-playsinline muted></video>
-      -->
+      <!-- Narration (non-muted; plays after Start) -->
+      <audio id="thembekaAudio"
+             src="assets/thembeka.mp3"
+             preload="auto"
+             playsinline
+             webkit-playsinline></audio>
     </a-assets>
 
-    <!-- HIRO marker -->
-    <a-marker preset="hiro" id="marker" emitevents="true">
-      <!-- UPRIGHT + FACING CAMERA (no mirror):
-           - rotation="0 180 0" points the front away; scale="-1 1 1" flips it back so text reads correctly.
-           - position y raises it to hover above marker.
-           - width/height: keep big but not extreme so tracking stays stable. -->
-      <a-image id="thembekaPoster"
-               src="#thembekaImg"
-               rotation="0 180 0"
-               scale="-1 1 1"
-               position="0 1.6 0"
-               width="5.4" height="6.2"
-               material="side: double; transparent: true; alphaTest: 0.01"
-               visible="false">
-      </a-image>
+    <!-- Marker with smoothing to reduce flicker -->
+    <a-marker
+      id="marker"
+      preset="hiro"
+      emitevents="true"
+      smooth="true"
+      smoothCount="10"
+      smoothTolerance="0.01"
+      smoothThreshold="5">
 
-      <!-- lights (harmless for 2D; useful if you add 3D later) -->
+      <!-- Upright, hovering above marker -->
+      <a-video id="thembekaPoster"
+               src="#thembekaVideo"
+               rotation="0 180 0"
+               position="0 2 0"
+               width="3.2" height="4.2"
+               visible="false"></a-video>
+
+      <!-- Optional lights (fine to keep) -->
       <a-entity light="type: ambient; intensity: 1"></a-entity>
       <a-entity light="type: directional; intensity: 0.6" position="1 2 1"></a-entity>
     </a-marker>
@@ -99,18 +115,15 @@
   </a-scene>
 
   <script>
-    // Ensure the injected camera video fills the whole screen even if AR.js attaches late
-    (function ensureCamVisible(){
+    // Ensure camera video fills the screen even if AR.js injects late
+    (function keepCamFull(){
       function styleCam(v){
         if(!v) return;
         v.id = 'arjs-video';
         Object.assign(v.style, {
-          position:'fixed', top:'0', left:'0', right:'0', bottom:'0',
-          width:'100vw',
+          position:'fixed', top:'0', left:'0', width:'100vw',
           height: (CSS && CSS.supports && CSS.supports('height: 100svh')) ? '100svh' : '100vh',
-          objectFit:'cover', zIndex:'0', background:'#000',
-          transform:'translateZ(0) scale(1.02)',
-          transformOrigin:'center center'
+          objectFit:'cover', zIndex:'0', background:'#000'
         });
         v.setAttribute('playsinline',''); v.setAttribute('webkit-playsinline','');
         v.muted = true;
@@ -120,38 +133,68 @@
       setTimeout(()=>styleCam(document.querySelector('#arjs-video')), 1200);
     })();
 
-    const marker      = document.querySelector('#marker');
-    const poster      = document.querySelector('#thembekaPoster');
-    const audioEl     = document.querySelector('#thembekaAudio');
-    const soundUnlock = document.querySelector('#soundUnlock');
+    const startUI     = document.getElementById('start');
+    const startBtn    = document.getElementById('startBtn');
+    const unlockBtn   = document.getElementById('soundUnlock');
 
-    // Prime audio on first touch/click (iOS needs a gesture)
-    let soundPrimed = false;
-    function primeSound() {
-      if (soundPrimed) return;
-      audioEl.play().then(()=> {
-        audioEl.pause();
-        audioEl.currentTime = 0;
-        soundPrimed = true;
-        soundUnlock.style.display = 'none';
-      }).catch(()=>{
-        soundUnlock.style.display = 'block';
-      });
-    }
-    document.addEventListener('touchstart', primeSound, {once:false});
-    document.addEventListener('click',       primeSound, {once:false});
-    soundUnlock.addEventListener('click',    primeSound);
+    const marker      = document.getElementById('marker');
+    const poster      = document.getElementById('thembekaPoster');
+    const videoEl     = document.getElementById('thembekaVideo');
+    const audioEl     = document.getElementById('thembekaAudio');
 
-    // Show/hide + play/pause when the marker is seen/lost
+    let userPrimed = false;
+    let markerVisible = false;
+    let lostTimer = null;
+
+    // 1) Start: prime media with a user gesture (iOS requirement)
+    startBtn.addEventListener('click', async () => {
+      try {
+        // Prime video (muted) and audio (will still need play() later)
+        await videoEl.play(); videoEl.pause(); videoEl.currentTime = 0;
+        await audioEl.play(); audioEl.pause(); audioEl.currentTime = 0;
+        userPrimed = true;
+        startUI.style.display = 'none';
+      } catch (e) {
+        // If audio refuses, we’ll show Unlock later
+        userPrimed = true;
+        startUI.style.display = 'none';
+      }
+    });
+
+    // 2) Debounce marker events to avoid flicker freezes
     marker.addEventListener('markerFound', () => {
+      markerVisible = true;
+      if (lostTimer) { clearTimeout(lostTimer); lostTimer = null; }
       poster.setAttribute('visible','true');
-      audioEl.play().catch(()=>{ soundUnlock.style.display = 'block'; });
+
+      // Play video (muted) always allowed
+      videoEl.play().catch(()=>{});
+
+      // Try audio (needs Start tap first)
+      if (userPrimed) {
+        audioEl.play().catch(()=>{ unlockBtn.style.display = 'block'; });
+      } else {
+        unlockBtn.style.display = 'block';
+      }
     });
 
     marker.addEventListener('markerLost', () => {
-      poster.setAttribute('visible','false');
-      audioEl.pause();
-      audioEl.currentTime = 0;
+      markerVisible = false;
+      // Wait 500ms before pausing in case tracking flickers briefly
+      lostTimer = setTimeout(() => {
+        if (!markerVisible) {
+          poster.setAttribute('visible','false');
+          videoEl.pause(); videoEl.currentTime = 0;
+          audioEl.pause(); audioEl.currentTime = 0;
+        }
+      }, 500);
+    });
+
+    // 3) Manual unlock if iOS still blocks audio
+    unlockBtn.addEventListener('click', () => {
+      audioEl.play().then(()=>{
+        unlockBtn.style.display = 'none';
+      }).catch(()=>{ /* if it still fails, leave the button visible */ });
     });
   </script>
 </body>
