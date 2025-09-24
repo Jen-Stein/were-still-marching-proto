@@ -5,38 +5,36 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
   <title>We’re Still Marching — AR Test</title>
 
-  <!-- A-Frame (match your friend’s working versions) -->
+  <!-- A-Frame (same version that works for your friend) -->
   <script src="https://aframe.io/releases/1.2.0/aframe.min.js"></script>
-  <!-- AR.js for A-Frame (marker-based) -->
+  <!-- AR.js for A-Frame -->
   <script src="https://cdn.jsdelivr.net/gh/AR-js-org/AR.js/aframe/build/aframe-ar.js"></script>
 
   <style>
-    /* Make page neutral and prevent scroll */
-    html, body { margin:0; height:100%; overflow:hidden; font-family: Arial, sans-serif; }
+    /* reset + no scroll */
+    html, body { margin:0; height:100%; overflow:hidden; background:#000; font-family:Arial, sans-serif; }
 
-    /* IMPORTANT: show the AR.js camera video full-screen behind the canvas */
-    /* AR.js injects <video id="arjs-video"> — we force it visible and covering */
+    /* make the camera video truly full-screen behind the canvas */
     #arjs-video, video#arjs-video, video[playsinline] {
       position: fixed !important;
-      top: 0; left: 0;
-      width: 100vw !important;
-      height: 100vh !important;
-      object-fit: cover !important;
+      inset: 0 !important;                 /* fills all sides (fixes right-side line) */
+      width: 100% !important;
+      height: 100% !important;
+      object-fit: cover !important;        /* cover the whole screen */
       z-index: 0 !important;
-      background: #000; /* fallback */
+      background: #000;
     }
 
-    /* Make the WebGL canvas transparent and full screen */
+    /* keep the WebGL canvas on top and transparent */
     a-scene, .a-canvas, canvas {
       position: fixed !important;
-      top: 0; left: 0;
-      width: 100vw !important;
-      height: 100vh !important;
-      background: transparent !important; /* don’t block the camera video */
+      inset: 0 !important;
+      width: 100% !important;
+      height: 100% !important;
+      background: transparent !important;
       z-index: 1 !important;
     }
 
-    /* Simple on-screen help */
     .ui {
       position: absolute; top: 12px; left: 12px; z-index: 2;
       background: rgba(255,255,255,0.9); padding:8px 10px; border-radius:6px;
@@ -47,40 +45,41 @@
 <body>
   <div class="ui">
     1) Allow camera access<br>
-    2) Point at the printed <b>Hiro</b> marker<br>
-    3) You should see your character on the marker (camera should be visible behind)
+    2) Point at printed <b>Hiro</b> marker<br>
+    3) You should see the character floating above the marker
   </div>
 
   <a-scene
     embedded
-    vr-mode-ui="enabled: false"
-    renderer="alpha: true; antialias: true"  <!-- alpha = transparent canvas -->
-    arjs="sourceType: webcam; debugUIEnabled: false;">
-    
+    vr-mode-ui="enabled:false"
+    renderer="alpha:true; antialias:true"
+    arjs="sourceType: webcam; debugUIEnabled:false">
+
     <!-- HIRO marker -->
-    <a-marker preset="hiro">
-      <!-- Your character (GIF) -->
+    <a-marker preset="hiro" emitevents="true">
+
+      <!-- OPTION A: GIF (shows as a static image on some phones; okay for now) -->
       <a-image
         src="url(assets/thembeka.gif)"
         rotation="-90 0 0"
-        width="1.2" height="1.6"
-        position="0 0 0.02">
-      </a-image>
+        position="0 0.35 0"       <!-- hover 35 cm above marker -->
+        width="1.8" height="2.4"  <!-- bigger footprint -->
+        ></a-image>
 
-      <!-- OPTIONAL: swap to MP4 for smoother animation on iOS (uncomment when you have thembeka.mp4) -->
+      <!-- OPTION B: MP4 video (uncomment when you have thembeka.mp4) -->
       <!--
       <a-assets>
-        <video id="clip" src="assets/thembeka.mp4" loop playsinline webkit-playsinline muted></video>
+        <video id="thembekaVideo" src="assets/thembeka.mp4" loop playsinline webkit-playsinline muted></video>
       </a-assets>
       <a-video
-        src="#clip"
+        src="#thembekaVideo"
         rotation="-90 0 0"
-        width="1.2" height="1.6"
-        position="0 0 0.02">
-      </a-video>
+        position="0 0.35 0"
+        width="1.8" height="2.4"
+        ></a-video>
       -->
-      
-      <!-- Lights (fine to keep; 2D doesn’t need them but harmless) -->
+
+      <!-- lights (harmless for 2D, useful if you add 3D later) -->
       <a-entity light="type: ambient; intensity: 1"></a-entity>
       <a-entity light="type: directional; intensity: 0.6" position="1 2 1"></a-entity>
     </a-marker>
@@ -89,24 +88,20 @@
   </a-scene>
 
   <script>
-    // As a safety: if AR.js creates the video element after load, force its CSS again.
-    (function ensureVideoVisible(){
-      function applyStyles(v){
+    // safety: if AR.js injects the video late, re-apply styles
+    (function ensureCamVisible(){
+      function styleCam(v){
         if(!v) return;
-        v.setAttribute('id','arjs-video');
-        v.style.position='fixed';
-        v.style.top='0'; v.style.left='0';
-        v.style.width='100vw'; v.style.height='100vh';
-        v.style.objectFit='cover';
-        v.style.zIndex='0';
-        v.style.background='#000';
-        v.setAttribute('playsinline','');
-        v.setAttribute('webkit-playsinline','');
-        v.muted = true; // iOS policy happiness (for safety; it’s camera, not audio)
+        v.id = 'arjs-video';
+        Object.assign(v.style, {
+          position:'fixed', inset:'0', width:'100%', height:'100%',
+          objectFit:'cover', zIndex:'0', background:'#000'
+        });
+        v.setAttribute('playsinline',''); v.setAttribute('webkit-playsinline','');
+        v.muted = true;
       }
-      // Try now, then again after a tick
-      applyStyles(document.querySelector('#arjs-video'));
-      setTimeout(()=>applyStyles(document.querySelector('#arjs-video')), 1200);
+      styleCam(document.querySelector('#arjs-video'));
+      setTimeout(()=>styleCam(document.querySelector('#arjs-video')), 800);
     })();
   </script>
 </body>
