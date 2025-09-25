@@ -2,54 +2,50 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <title>We’re Still Marching — AR (GIF)</title>
+  <title>We’re Still Marching</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover"/>
 
-  <!-- A-Frame + AR.js -->
+  <!-- A-Frame -->
   <script src="https://aframe.io/releases/1.2.0/aframe.min.js"></script>
+  <!-- AR.js for A-Frame -->
   <script src="https://cdn.jsdelivr.net/gh/AR-js-org/AR.js/aframe/build/aframe-ar.js"></script>
-
-  <!-- GIF shader (third-party) -->
-  <script src="https://unpkg.com/aframe-gif-shader/dist/aframe-gif-shader.min.js"></script>
 
   <style>
     html, body {
       margin:0; padding:0; width:100%; height:100%;
       overflow:hidden; background:#000; font-family:Arial,sans-serif;
     }
-
-    /* Force the camera video to truly fill the screen (overscan hides right-edge seam on iPhone) */
-    #arjs-video, video#arjs-video, video[playsinline]{
-      position:fixed !important;
-      top:0 !important; left:-12px !important;
-      width:calc(100vw + 24px) !important;
-      height:100svh !important;            /* falls back to 100vh below */
-      object-fit:cover !important;
-      z-index:0 !important;
-      background:#000 !important;
+    /* Make the camera video truly cover the screen */
+    #arjs-video, video#arjs-video, video[playsinline] {
+      position: fixed !important;
+      top: 0 !important; left: 0 !important; right: 0 !important; bottom: 0 !important;
+      width: 100vw !important;
+      height: 100vh !important;           /* fallback */
+      height: 100svh !important;          /* iOS new unit */
+      object-fit: cover !important;
+      z-index: 0 !important;
+      background: #000 !important;
     }
-
-    /* WebGL canvas on top, transparent */
-    a-scene, .a-canvas, canvas{
-      position:fixed !important;
-      top:0 !important; left:0 !important;
-      width:100vw !important; height:100svh !important;
-      background:transparent !important;
-      z-index:1 !important;
+    /* Put WebGL canvas above the camera */
+    a-scene, .a-canvas, canvas {
+      position: fixed !important;
+      top: 0 !important; left: 0 !important; right: 0 !important; bottom: 0 !important;
+      width: 100vw !important;
+      height: 100vh !important;
+      height: 100svh !important;
+      background: transparent !important;
+      z-index: 1 !important;
     }
-
-    /* Start overlay (to unlock audio) */
+    /* Start overlay */
     #start {
-      position: fixed; inset: 0; z-index: 3;
-      display:flex; flex-direction:column; align-items:center; justify-content:center;
-      background: rgba(0,0,0,0.9); color:#fff; text-align:center; padding:24px;
+      position: fixed; inset: 0;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      background: rgba(0,0,0,0.9); color:#fff; z-index: 3; text-align: center; padding: 24px;
     }
-    #start button{
-      margin-top:12px; padding:12px 18px; font-size:16px; border:0; border-radius:8px;
-      background:#ff6b6b; color:#fff;
+    #start button {
+      margin-top: 12px; padding: 12px 18px; font-size: 16px; border-radius: 8px;
+      border: 0; background: #ff6b6b; color: #fff;
     }
-
-    /* Fallback audio unlock if iOS still blocks */
     #soundUnlock {
       position: fixed; bottom: 14px; left: 50%; transform: translateX(-50%);
       z-index: 3; background: rgba(0,0,0,0.7); color:#fff; border:1px solid #fff;
@@ -59,12 +55,15 @@
 </head>
 <body>
 
+  <!-- Start (unlocks audio & primes video on iOS) -->
   <div id="start">
-    <h2>We’re Still Marching — AR Prototype (GIF)</h2>
+    <h2>We’re Still Marching — AR Prototype</h2>
     <p>Tap Start, allow camera, then point at the printed <b>HIRO</b> marker.</p>
     <button id="startBtn">Start</button>
   </div>
-  <button id="soundUnlock">🔊 Tap to enable sound</button>
+
+  <!-- Fallback prompt if iOS still blocks audio -->
+  <button id="soundUnlock"> Tap to enable sound</button>
 
   <a-scene
     embedded
@@ -73,7 +72,15 @@
     arjs="sourceType: webcam; debugUIEnabled:false">
 
     <a-assets>
-      <!-- Audio narration (non-muted) -->
+      <!-- Video (muted, loops) -->
+      <video id="thembekaVideo"
+             src="assets/thembeka.mp4"
+             loop
+             playsinline
+             webkit-playsinline
+             muted></video>
+
+      <!-- Narration (non-muted; plays after Start) -->
       <audio id="thembekaAudio"
              src="assets/thembeka.mp3"
              preload="auto"
@@ -81,24 +88,25 @@
              webkit-playsinline></audio>
     </a-assets>
 
-    <!-- HIRO marker -->
-    <a-marker id="marker" preset="hiro" emitevents="true"
-              smooth="true" smoothCount="10" smoothTolerance="0.01" smoothThreshold="5">
+    <!-- Marker with smoothing to reduce flicker -->
+    <a-marker
+      id="marker"
+      preset="hiro"
+      emitevents="true"
+      smooth="true"
+      smoothCount="10"
+      smoothTolerance="0.01"
+      smoothThreshold="5">
 
-      <!-- Upright, facing user, hovering above marker.
-           Using gif shader on a plane. 
-           scale = -1 1 1 un-mirrors so text reads correctly.
-           IMPORTANT: If your GIF has transparency, set transparent:true; otherwise omit it. -->
-      <a-entity id="thembekaPlane"
-                geometry="primitive: plane; width: 3.2; height: 4.0"
-                rotation="0 0 0"
-                scale="-1 1 1"
-                position="0 2 0"
-                visible="false"
-                material="shader: gif; src: url(assets/thembeka.gif); autoplay: false; loop: true; paused: true; transparent: true;">
-      </a-entity>
+      <!-- Upright, hovering above marker -->
+      <a-video id="thembekaPoster"
+               src="#thembekaVideo"
+               rotation="0 -180 0"
+               position="0 2 0"
+               width="6.2" height="7.2"
+               visible="false"></a-video>
 
-      <!-- optional lights (fine to keep) -->
+      <!-- Optional lights (fine to keep) -->
       <a-entity light="type: ambient; intensity: 1"></a-entity>
       <a-entity light="type: directional; intensity: 0.6" position="1 2 1"></a-entity>
     </a-marker>
@@ -107,15 +115,14 @@
   </a-scene>
 
   <script>
-    // Keep camera video full-screen (re-apply after AR.js injects it)
+    // Ensure camera video fills the screen even if AR.js injects late
     (function keepCamFull(){
       function styleCam(v){
         if(!v) return;
         v.id = 'arjs-video';
         Object.assign(v.style, {
-          position:'fixed', top:'0', left:'-12px',
-          width:'calc(100vw + 24px)',
-          height:(CSS && CSS.supports && CSS.supports('height: 100svh')) ? '100svh' : '100vh',
+          position:'fixed', top:'0', left:'0', width:'100vw',
+          height: (CSS && CSS.supports && CSS.supports('height: 100svh')) ? '100svh' : '100vh',
           objectFit:'cover', zIndex:'0', background:'#000'
         });
         v.setAttribute('playsinline',''); v.setAttribute('webkit-playsinline','');
@@ -131,36 +138,39 @@
     const unlockBtn   = document.getElementById('soundUnlock');
 
     const marker      = document.getElementById('marker');
-    const plane       = document.getElementById('thembekaPlane');
+    const poster      = document.getElementById('thembekaPoster');
+    const videoEl     = document.getElementById('thembekaVideo');
     const audioEl     = document.getElementById('thembekaAudio');
 
     let userPrimed = false;
     let markerVisible = false;
     let lostTimer = null;
 
-    // Helper to pause/unpause GIF shader
-    function setGifPaused(val){
-      // Update the 'paused' prop on the material
-      plane.setAttribute('material', 'paused', !!val);
-    }
-
-    // 1) Start: prime audio with a user gesture (iOS requirement)
+    // 1) Start: prime media with a user gesture
     startBtn.addEventListener('click', async () => {
       try {
+        // Prime video (muted) and audio (will still need play() later)
+        await videoEl.play(); videoEl.pause(); videoEl.currentTime = 0;
         await audioEl.play(); audioEl.pause(); audioEl.currentTime = 0;
-      } catch(e){}
-      userPrimed = true;
-      startUI.style.display = 'none';
+        userPrimed = true;
+        startUI.style.display = 'none';
+      } catch (e) {
+        // Unlock later if audio refuses
+        userPrimed = true;
+        startUI.style.display = 'none';
+      }
     });
 
-    // 2) Show plane + play audio + unpause GIF when marker appears; reverse when lost
+    // 2) Debounce marker events to avoid flicker freezes
     marker.addEventListener('markerFound', () => {
       markerVisible = true;
       if (lostTimer) { clearTimeout(lostTimer); lostTimer = null; }
+      poster.setAttribute('visible','true');
 
-      plane.setAttribute('visible','true');
-      setGifPaused(false);  // start GIF animation
+      // Play video (muted) always allowed
+      videoEl.play().catch(()=>{});
 
+      // Try audio (needs Start tap first)
       if (userPrimed) {
         audioEl.play().catch(()=>{ unlockBtn.style.display = 'block'; });
       } else {
@@ -170,20 +180,21 @@
 
     marker.addEventListener('markerLost', () => {
       markerVisible = false;
-      // Small debounce to avoid flicker stopping
+      // Wait 500ms before pausing in case tracking flickers briefly
       lostTimer = setTimeout(() => {
         if (!markerVisible) {
-          plane.setAttribute('visible','false');
-          setGifPaused(true); // pause GIF
-          audioEl.pause();
-          audioEl.currentTime = 0;
+          poster.setAttribute('visible','false');
+          videoEl.pause(); videoEl.currentTime = 0;
+          audioEl.pause(); audioEl.currentTime = 0;
         }
-      }, 400);
+      }, 500);
     });
 
     // 3) Manual unlock if iOS still blocks audio
     unlockBtn.addEventListener('click', () => {
-      audioEl.play().then(()=>{ unlockBtn.style.display = 'none'; }).catch(()=>{});
+      audioEl.play().then(()=>{
+        unlockBtn.style.display = 'none';
+      }).catch(()=>{  });
     });
   </script>
 </body>
