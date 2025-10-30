@@ -11,31 +11,40 @@
   <script src="https://cdn.jsdelivr.net/gh/AR-js-org/AR.js/aframe/build/aframe-ar.js"></script>
 
   <style>
+    :root {
+      /* pick the best full-height unit available */
+      --vh: 100dvh;
+    }
+    @supports not (height: 100dvh) {
+      :root { --vh: 100vh; }
+    }
+
     html, body {
       margin:0; padding:0; width:100%; height:100%;
       overflow:hidden; background:#000; font-family:Arial,sans-serif;
     }
-    /* Make the camera video truly cover the screen */
+
+    /* Camera video: fill the screen, always */
     #arjs-video, video#arjs-video, video[playsinline] {
       position: fixed !important;
-      top: 0 !important; left: 0 !important; right: 0 !important; bottom: 0 !important;
-      width: 100% !important;
-      height: auto !important;           /* fallback */
-      height: 100svh !important;          /* iOS new unit */
+      inset: 0 !important;
+      width: 100vw !important;
+      height: var(--vh) !important;
       object-fit: cover !important;
       z-index: 0 !important;
       background: #000 !important;
     }
-    /* Put WebGL canvas above the camera */
+
+    /* WebGL canvas on top, transparent, same exact size */
     a-scene, .a-canvas, canvas {
       position: fixed !important;
-      top: 0 !important; left: 0 !important; right: 0 !important; bottom: 0 !important;
-      width: 100% !important;
-      height: auto !important;
-      height: 100svh !important;
+      inset: 0 !important;
+      width: 100vw !important;
+      height: var(--vh) !important;
       background: transparent !important;
       z-index: 1 !important;
     }
+
     /* Start overlay */
     #start {
       position: fixed; inset: 0;
@@ -46,6 +55,8 @@
       margin-top: 12px; padding: 12px 18px; font-size: 16px; border-radius: 8px;
       border: 0; background: #ff6b6b; color: #fff;
     }
+
+    /* Fallback audio unlock */
     #soundUnlock {
       position: fixed; bottom: 14px; left: 50%; transform: translateX(-50%);
       z-index: 3; background: rgba(0,0,0,0.7); color:#fff; border:1px solid #fff;
@@ -98,15 +109,15 @@
       smoothTolerance="0.01"
       smoothThreshold="5">
 
-      <!-- Upright, hovering above marker -->
+      <!-- Upright, facing camera, hovering above marker -->
       <a-video id="thembekaPoster"
-         src="#thembekaVideo"
-         rotation="0 180 0"
-         position="0 2 0"
-         width="6.2" height="7.2"
-         visible="false"></a-video>
+               src="#thembekaVideo"
+               rotation="0 180 0"
+               position="0 2 0"
+               width="6.2" height="7.2"
+               visible="false"></a-video>
 
-      <!-- Optional lights (fine to keep) -->
+      <!-- Optional lights -->
       <a-entity light="type: ambient; intensity: 1"></a-entity>
       <a-entity light="type: directional; intensity: 0.6" position="1 2 1"></a-entity>
     </a-marker>
@@ -115,23 +126,35 @@
   </a-scene>
 
   <script>
-    // Ensure camera video fills the screen even if AR.js injects late
-    (function keepCamFull(){
-      function styleCam(v){
-        if(!v) return;
-        v.id = 'arjs-video';
-        Object.assign(v.style, {
-          position:'fixed', top:'0', left:'0', width:'100vw',
-          height: (CSS && CSS.supports && CSS.supports('height: 100svh')) ? '100svh' : '100vh',
-          objectFit:'cover', zIndex:'0', background:'#000'
-        });
-        v.setAttribute('playsinline',''); v.setAttribute('webkit-playsinline','');
-        v.muted = true;
-      }
-      styleCam(document.querySelector('#arjs-video'));
-      setTimeout(()=>styleCam(document.querySelector('#arjs-video')), 600);
-      setTimeout(()=>styleCam(document.querySelector('#arjs-video')), 1200);
-    })();
+    // Force video/canvas to fill the screen on load + rotate + resize (prevents right-edge strip on iOS)
+    function setVHVar() {
+      const vh = Math.max(window.innerHeight, document.documentElement.clientHeight);
+      document.documentElement.style.setProperty('--vh', vh + 'px');
+    }
+    function styleARVideo() {
+      const v = document.querySelector('#arjs-video, video#arjs-video, video[playsinline]');
+      if (!v) return;
+      v.style.position = 'fixed';
+      v.style.inset = '0';
+      v.style.width = '100vw';
+      v.style.height = getComputedStyle(document.documentElement).getPropertyValue('--vh') || '100vh';
+      v.style.objectFit = 'cover';
+      v.style.zIndex = '0';
+      v.style.background = '#000';
+      v.setAttribute('playsinline','');
+      v.setAttribute('webkit-playsinline','');
+      v.muted = true;
+    }
+    function restyleAll() {
+      setVHVar();
+      styleARVideo();
+    }
+    window.addEventListener('resize', restyleAll);
+    window.addEventListener('orientationchange', () => setTimeout(restyleAll, 250));
+    document.addEventListener('DOMContentLoaded', () => {
+      setTimeout(restyleAll, 300);
+      setTimeout(restyleAll, 900);
+    });
 
     const startUI     = document.getElementById('start');
     const startBtn    = document.getElementById('startBtn');
@@ -149,16 +172,12 @@
     // 1) Start: prime media with a user gesture
     startBtn.addEventListener('click', async () => {
       try {
-        // Prime video (muted) and audio (will still need play() later)
         await videoEl.play(); videoEl.pause(); videoEl.currentTime = 0;
         await audioEl.play(); audioEl.pause(); audioEl.currentTime = 0;
-        userPrimed = true;
-        startUI.style.display = 'none';
-      } catch (e) {
-        // Unlock later if audio refuses
-        userPrimed = true;
-        startUI.style.display = 'none';
-      }
+      } catch (_) {}
+      userPrimed = true;
+      startUI.style.display = 'none';
+      restyleAll(); // ensure full-screen after overlay hides
     });
 
     // 2) Debounce marker events to avoid flicker freezes
@@ -166,11 +185,7 @@
       markerVisible = true;
       if (lostTimer) { clearTimeout(lostTimer); lostTimer = null; }
       poster.setAttribute('visible','true');
-
-      // Play video (muted) always allowed
       videoEl.play().catch(()=>{});
-
-      // Try audio (needs Start tap first)
       if (userPrimed) {
         audioEl.play().catch(()=>{ unlockBtn.style.display = 'block'; });
       } else {
@@ -180,7 +195,6 @@
 
     marker.addEventListener('markerLost', () => {
       markerVisible = false;
-      // Wait 500ms before pausing in case tracking flickers briefly
       lostTimer = setTimeout(() => {
         if (!markerVisible) {
           poster.setAttribute('visible','false');
@@ -194,12 +208,8 @@
     unlockBtn.addEventListener('click', () => {
       audioEl.play().then(()=>{
         unlockBtn.style.display = 'none';
-      }).catch(()=>{  });
+      }).catch(()=>{});
     });
   </script>
 </body>
 </html>
-
-
-
-
