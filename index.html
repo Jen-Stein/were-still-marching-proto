@@ -5,80 +5,104 @@
   <title>We’re Still Marching</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover"/>
 
-  <!-- A-Frame + AR.js -->
+  <!-- A-Frame -->
   <script src="https://aframe.io/releases/1.2.0/aframe.min.js"></script>
+  <!-- AR.js for A-Frame -->
   <script src="https://cdn.jsdelivr.net/gh/AR-js-org/AR.js/aframe/build/aframe-ar.js"></script>
 
   <style>
-    html, body {
+    html, body{
       margin:0; padding:0; width:100%; height:100%;
       overflow:hidden; background:#000; font-family:Arial,sans-serif;
     }
 
-    /* Fill the entire visual viewport */
+    /* Your requested sizing model: width:100% / height:auto.
+       We add a tiny OVERSCAN to hide that right-side black line across devices. */
     #arjs-video, video#arjs-video, video[playsinline]{
       position:fixed !important;
-      top:0 !important; left:0 !important;
-      width:100vw !important;
-      height:100svh !important;     /* iOS 16+ visual viewport */
+      top:0 !important; left:-12px !important;        /* overscan */
+      width:calc(100% + 24px) !important;             /* overscan */
+      height:auto !important;
       object-fit:cover !important;
-      background:#000 !important;
       z-index:0 !important;
+      background:#000 !important;
+      transform:none !important;
     }
 
-    /* WebGL canvas on top, same size */
+    /* Put WebGL canvas above the camera, same overscan so edges match */
     a-scene, .a-canvas, canvas{
       position:fixed !important;
-      top:0 !important; left:0 !important;
-      width:100vw !important;
-      height:100svh !important;
+      top:0 !important; left:-12px !important;        /* overscan */
+      width:calc(100% + 24px) !important;             /* overscan */
+      height:auto !important;
       background:transparent !important;
       z-index:1 !important;
+      transform:none !important;
     }
 
-    /* Start overlay + iOS audio unlock */
+    /* Start overlay */
     #start{
-      position:fixed; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center;
-      background:rgba(0,0,0,0.9); color:#fff; z-index:3; text-align:center; padding:24px;
+      position:fixed; inset:0;
+      display:flex; flex-direction:column; align-items:center; justify-content:center;
+      background:rgba(0,0,0,.9); color:#fff; z-index:3; text-align:center; padding:24px;
     }
     #start button{
-      margin-top:12px; padding:12px 18px; font-size:16px; border-radius:8px; border:0; background:#ff6b6b; color:#fff;
+      margin-top:12px; padding:12px 18px; font-size:16px; border-radius:8px; border:0;
+      background:#ff6b6b; color:#fff;
     }
+
+    /* Fallback audio unlock */
     #soundUnlock{
       position:fixed; bottom:14px; left:50%; transform:translateX(-50%);
-      z-index:3; background:rgba(0,0,0,0.7); color:#fff; border:1px solid #fff; padding:10px 14px; border-radius:8px;
-      font-size:14px; display:none;
+      z-index:3; background:rgba(0,0,0,.7); color:#fff; border:1px solid #fff;
+      padding:10px 14px; border-radius:8px; font-size:14px; display:none;
     }
   </style>
 </head>
 <body>
 
+  <!-- Start (unlocks audio & primes video on iOS) -->
   <div id="start">
     <h2>We’re Still Marching — AR Prototype</h2>
     <p>Tap Start, allow camera, then point at the printed <b>HIRO</b> marker.</p>
     <button id="startBtn">Start</button>
   </div>
-  <button id="soundUnlock">🔊 Tap to enable sound</button>
+
+  <!-- Fallback prompt if iOS still blocks audio -->
+  <button id="soundUnlock">Tap to enable sound</button>
 
   <a-scene
     embedded
     vr-mode-ui="enabled:false"
     renderer="alpha:true; antialias:true"
-    arjs="sourceType:webcam; debugUIEnabled:false">
+    arjs="sourceType: webcam; debugUIEnabled:false">
 
     <a-assets>
-      <video id="thembekaVideo" src="assets/thembeka.mp4" loop playsinline webkit-playsinline muted></video>
-      <audio id="thembekaAudio" src="assets/thembeka.mp3" preload="auto" playsinline webkit-playsinline></audio>
+      <!-- Video (muted, loops) -->
+      <video id="thembekaVideo"
+             src="assets/thembeka.mp4"
+             loop
+             playsinline
+             webkit-playsinline
+             muted></video>
+
+      <!-- Narration -->
+      <audio id="thembekaAudio"
+             src="assets/thembeka.mp3"
+             preload="auto"
+             playsinline
+             webkit-playsinline></audio>
     </a-assets>
 
+    <!-- Marker -->
     <a-marker id="marker" preset="hiro" emitevents="true"
               smooth="true" smoothCount="10" smoothTolerance="0.01" smoothThreshold="5">
 
-      <!-- Upright, facing the camera, not mirrored -->
+      <!-- Upright, facing the camera, NOT mirrored letters (use scale -1 1 1) -->
       <a-video id="thembekaPoster"
                src="#thembekaVideo"
                rotation="0 0 0"
-               scale="-1 1 1"           <!-- mirror horizontally so text reads correctly -->
+               scale="-1 1 1"
                position="0 2 0"
                width="6.2" height="7.2"
                visible="false"></a-video>
@@ -91,54 +115,65 @@
   </a-scene>
 
   <script>
-    // Keep the injected camera video sized after AR.js attaches
-    (function keepCamFull(){
-      const fit = v=>{
-        if(!v) return;
-        v.style.position='fixed'; v.style.top='0'; v.style.left='0';
-        v.style.width='100vw'; v.style.height='100svh';
-        v.style.objectFit='cover'; v.style.background='#000'; v.style.zIndex='0';
-      };
-      fit(document.querySelector('#arjs-video'));
-      setTimeout(()=>fit(document.querySelector('#arjs-video')), 400);
-      setTimeout(()=>fit(document.querySelector('#arjs-video')), 1000);
-    })();
-
     const startUI   = document.getElementById('start');
     const startBtn  = document.getElementById('startBtn');
     const unlockBtn = document.getElementById('soundUnlock');
+
     const marker    = document.getElementById('marker');
     const poster    = document.getElementById('thembekaPoster');
     const videoEl   = document.getElementById('thembekaVideo');
     const audioEl   = document.getElementById('thembekaAudio');
 
-    let userPrimed = false, markerVisible = false, lostTimer = null;
+    // Re-apply overscan after AR.js injects/adjusts video/canvas
+    function rescanSize(){
+      const v = document.querySelector('#arjs-video, video#arjs-video, video[playsinline]');
+      if (v){
+        v.style.left = '-12px';
+        v.style.width = 'calc(100% + 24px)';
+      }
+      const c = document.querySelector('canvas.a-canvas, .a-canvas canvas, a-scene canvas');
+      if (c){
+        c.style.left = '-12px';
+        c.style.width = 'calc(100% + 24px)';
+      }
+    }
+    setTimeout(rescanSize, 300);
+    setTimeout(rescanSize, 800);
+    window.addEventListener('resize', ()=>setTimeout(rescanSize, 150));
+    window.addEventListener('orientationchange', ()=>setTimeout(rescanSize, 300));
 
-    startBtn.addEventListener('click', async ()=>{
+    let userPrimed = false;
+    let markerVisible = false;
+    let lostTimer = null;
+
+    // Start: prime media with a user gesture
+    startBtn.addEventListener('click', async () => {
       try {
         await videoEl.play(); videoEl.pause(); videoEl.currentTime = 0;
         await audioEl.play(); audioEl.pause(); audioEl.currentTime = 0;
       } catch(_) {}
       userPrimed = true;
-      startUI.style.display='none';
+      startUI.style.display = 'none';
+      rescanSize();
     });
 
-    marker.addEventListener('markerFound', ()=>{
+    // Marker events
+    marker.addEventListener('markerFound', () => {
       markerVisible = true;
-      if (lostTimer){clearTimeout(lostTimer); lostTimer=null;}
+      if (lostTimer) { clearTimeout(lostTimer); lostTimer = null; }
       poster.setAttribute('visible','true');
       videoEl.play().catch(()=>{});
-      if (userPrimed){
-        audioEl.play().catch(()=>{ unlockBtn.style.display='block'; });
+      if (userPrimed) {
+        audioEl.play().catch(()=>{ unlockBtn.style.display = 'block'; });
       } else {
-        unlockBtn.style.display='block';
+        unlockBtn.style.display = 'block';
       }
     });
 
-    marker.addEventListener('markerLost', ()=>{
+    marker.addEventListener('markerLost', () => {
       markerVisible = false;
-      lostTimer = setTimeout(()=>{
-        if (!markerVisible){
+      lostTimer = setTimeout(() => {
+        if (!markerVisible) {
           poster.setAttribute('visible','false');
           videoEl.pause(); videoEl.currentTime = 0;
           audioEl.pause(); audioEl.currentTime = 0;
@@ -146,8 +181,8 @@
       }, 500);
     });
 
-    unlockBtn.addEventListener('click', ()=>{
-      audioEl.play().then(()=> unlockBtn.style.display='none');
+    unlockBtn.addEventListener('click', () => {
+      audioEl.play().then(()=> unlockBtn.style.display = 'none').catch(()=>{});
     });
   </script>
 </body>
