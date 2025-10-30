@@ -11,34 +11,14 @@
   <script src="https://cdn.jsdelivr.net/gh/AR-js-org/AR.js/aframe/build/aframe-ar.js"></script>
 
   <style>
-    html, body{
+    /* Minimal, no aggressive sizing */
+    html, body {
       margin:0; padding:0; width:100%; height:100%;
       overflow:hidden; background:#000; font-family:Arial,sans-serif;
     }
 
-    /* Your requested sizing model: width:100% / height:auto.
-       We add a tiny OVERSCAN to hide that right-side black line across devices. */
-    #arjs-video, video#arjs-video, video[playsinline]{
-      position:fixed !important;
-      top:0 !important; left:-12px !important;        /* overscan */
-      width:calc(100% + 24px) !important;             /* overscan */
-      height:auto !important;
-      object-fit:cover !important;
-      z-index:0 !important;
-      background:#000 !important;
-      transform:none !important;
-    }
-
-    /* Put WebGL canvas above the camera, same overscan so edges match */
-    a-scene, .a-canvas, canvas{
-      position:fixed !important;
-      top:0 !important; left:-12px !important;        /* overscan */
-      width:calc(100% + 24px) !important;             /* overscan */
-      height:auto !important;
-      background:transparent !important;
-      z-index:1 !important;
-      transform:none !important;
-    }
+    /* Keep the WebGL layer transparent; let AR.js size things */
+    a-scene, .a-canvas, canvas { background:transparent !important; }
 
     /* Start overlay */
     #start{
@@ -98,11 +78,10 @@
     <a-marker id="marker" preset="hiro" emitevents="true"
               smooth="true" smoothCount="10" smoothTolerance="0.01" smoothThreshold="5">
 
-      <!-- Upright, facing the camera, NOT mirrored letters (use scale -1 1 1) -->
+      <!-- Fix mirroring: face camera with no 180 flip -->
       <a-video id="thembekaPoster"
                src="#thembekaVideo"
                rotation="0 0 0"
-               scale="-1 1 1"
                position="0 2 0"
                width="6.2" height="7.2"
                visible="false"></a-video>
@@ -124,23 +103,20 @@
     const videoEl   = document.getElementById('thembekaVideo');
     const audioEl   = document.getElementById('thembekaAudio');
 
-    // Re-apply overscan after AR.js injects/adjusts video/canvas
-    function rescanSize(){
-      const v = document.querySelector('#arjs-video, video#arjs-video, video[playsinline]');
-      if (v){
-        v.style.left = '-12px';
-        v.style.width = 'calc(100% + 24px)';
-      }
-      const c = document.querySelector('canvas.a-canvas, .a-canvas canvas, a-scene canvas');
-      if (c){
-        c.style.left = '-12px';
-        c.style.width = 'calc(100% + 24px)';
-      }
+    // Nudge AR.js-injected camera video to cover the screen (no width/height forcing)
+    function nudgeVideo() {
+      const v = document.querySelector('video#arjs-video, video.arjs-video, video[playsinline]');
+      if (!v) return;
+      v.style.objectFit = 'cover';
+      v.style.background = '#000';
+      v.setAttribute('playsinline','');
+      v.setAttribute('webkit-playsinline','');
     }
-    setTimeout(rescanSize, 300);
-    setTimeout(rescanSize, 800);
-    window.addEventListener('resize', ()=>setTimeout(rescanSize, 150));
-    window.addEventListener('orientationchange', ()=>setTimeout(rescanSize, 300));
+    // AR.js injects late; nudge a few times
+    setTimeout(nudgeVideo, 200);
+    setTimeout(nudgeVideo, 800);
+    window.addEventListener('resize', () => setTimeout(nudgeVideo, 150));
+    window.addEventListener('orientationchange', () => setTimeout(nudgeVideo, 300));
 
     let userPrimed = false;
     let markerVisible = false;
@@ -150,11 +126,11 @@
     startBtn.addEventListener('click', async () => {
       try {
         await videoEl.play(); videoEl.pause(); videoEl.currentTime = 0;
-        await audioEl.play(); audioEl.pause(); audioEl.currentTime = 0;
+        await audioEl.play();  audioEl.pause();  audioEl.currentTime = 0;
       } catch(_) {}
       userPrimed = true;
       startUI.style.display = 'none';
-      rescanSize();
+      nudgeVideo();
     });
 
     // Marker events
