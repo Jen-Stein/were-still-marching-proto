@@ -11,19 +11,32 @@
   <script src="https://cdn.jsdelivr.net/gh/AR-js-org/AR.js/aframe/build/aframe-ar.js"></script>
 
   <style>
-    /* Minimal, no aggressive sizing */
-    html, body {
-      margin:0; padding:0; width:100%; height:100%;
-      overflow:hidden; background:#000; font-family:Arial,sans-serif;
+    html, body { margin:0; padding:0; width:100%; height:100%; overflow:hidden; background:#000; font-family:Arial,sans-serif; }
+
+    /* Camera video behind, tiny overscan to kill the right seam */
+    video#arjs-video, video.arjs-video, video[playsinline]{
+      position:fixed !important;
+      top:0 !important; left:-1px !important;
+      width:calc(100vw + 2px) !important;
+      height:100vh !important;
+      object-fit:cover !important;
+      z-index:0 !important;
+      background:#000 !important;
     }
 
-    /* Keep the WebGL layer transparent; let AR.js size things */
-    a-scene, .a-canvas, canvas { background:transparent !important; }
+    /* WebGL canvas on top, same geometry */
+    a-scene, .a-canvas, canvas{
+      position:fixed !important;
+      top:0 !important; left:-1px !important;
+      width:calc(100vw + 2px) !important;
+      height:100vh !important;
+      background:transparent !important;
+      z-index:1 !important;
+    }
 
     /* Start overlay */
     #start{
-      position:fixed; inset:0;
-      display:flex; flex-direction:column; align-items:center; justify-content:center;
+      position:fixed; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center;
       background:rgba(0,0,0,.9); color:#fff; z-index:3; text-align:center; padding:24px;
     }
     #start button{
@@ -78,7 +91,7 @@
     <a-marker id="marker" preset="hiro" emitevents="true"
               smooth="true" smoothCount="10" smoothTolerance="0.01" smoothThreshold="5">
 
-      <!-- Fix mirroring: face camera with no 180 flip -->
+      <!-- Fix text backwards: face camera with no 180 flip -->
       <a-video id="thembekaPoster"
                src="#thembekaVideo"
                rotation="0 0 0"
@@ -103,21 +116,6 @@
     const videoEl   = document.getElementById('thembekaVideo');
     const audioEl   = document.getElementById('thembekaAudio');
 
-    // Nudge AR.js-injected camera video to cover the screen (no width/height forcing)
-    function nudgeVideo() {
-      const v = document.querySelector('video#arjs-video, video.arjs-video, video[playsinline]');
-      if (!v) return;
-      v.style.objectFit = 'cover';
-      v.style.background = '#000';
-      v.setAttribute('playsinline','');
-      v.setAttribute('webkit-playsinline','');
-    }
-    // AR.js injects late; nudge a few times
-    setTimeout(nudgeVideo, 200);
-    setTimeout(nudgeVideo, 800);
-    window.addEventListener('resize', () => setTimeout(nudgeVideo, 150));
-    window.addEventListener('orientationchange', () => setTimeout(nudgeVideo, 300));
-
     let userPrimed = false;
     let markerVisible = false;
     let lostTimer = null;
@@ -126,11 +124,10 @@
     startBtn.addEventListener('click', async () => {
       try {
         await videoEl.play(); videoEl.pause(); videoEl.currentTime = 0;
-        await audioEl.play();  audioEl.pause();  audioEl.currentTime = 0;
+        await audioEl.play(); audioEl.pause(); audioEl.currentTime = 0;
       } catch(_) {}
       userPrimed = true;
       startUI.style.display = 'none';
-      nudgeVideo();
     });
 
     // Marker events
