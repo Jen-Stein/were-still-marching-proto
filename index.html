@@ -19,15 +19,17 @@
 
     /* Let AR.js place the camera video; we only say: full width, auto height */
     video#arjs-video, video.arjs-video, video[playsinline]{
-      position:fixed !important;
-      top:0 !important; left:0 !important;
-      width:100% !important;
-      height:auto !important;
-      z-index:0 !important;
-      background:#000 !important;
-      object-fit:cover !important; /* harmless if height:auto */
-      transform:none !important;
-    }
+  position:fixed !important;
+  top:0 !important;
+  left:0 !important;
+  width:100% !important;
+  height:100% !important;   /* <—— make sure it fills the screen */
+  object-fit:cover !important;  /* crops edges instead of letterboxing */
+  z-index:0 !important;
+  background:#000 !important;
+  transform:none !important;
+}
+
 
     /* Keep the scene on top, but DON'T force sizes here */
     a-scene[embedded]{
@@ -204,3 +206,4 @@
   </script>
 </body>
 </html>
+
