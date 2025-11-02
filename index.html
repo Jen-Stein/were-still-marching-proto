@@ -19,19 +19,18 @@
       overflow:hidden; background:#000; font-family:Arial,sans-serif;
     }
 
-    /* Keep exactly as you had it */
-    video#arjs-video, video.arjs-video, video[playsinline]{
+    /* ✅ Only style the AR.js camera video (NOT every video on the page) */
+    video#arjs-video, video.arjs-video{
       position:fixed !important;
-      top:0 !important;
-      left:0 !important;
-      width:100% !important;
-      height:100% !important;   /* <—— make sure it fills the screen */
-      object-fit:cover !important;  /* crops edges instead of letterboxing */
+      top:0 !important; left:0 !important;
+      width:100% !important; height:100% !important;
+      object-fit:cover !important;
       z-index:0 !important;
       background:#000 !important;
       transform:none !important;
     }
 
+    /* Keep the scene on top */
     a-scene[embedded]{
       position:fixed !important;
       top:0 !important; left:0 !important;
@@ -40,11 +39,12 @@
       z-index:1 !important;
     }
 
+    /* WebGL canvas */
     .a-canvas, canvas.a-canvas{
       position:fixed !important;
       top:0; left:0;
-      width:100% !important;   /* start aligned with video width */
-      height:auto !important;  /* JS will correct exact pixel height */
+      width:100% !important;
+      height:auto !important;
       background:transparent !important;
       z-index:1 !important;
       transform:none !important;
@@ -85,23 +85,28 @@
     embedded
     vr-mode-ui="enabled:false"
     renderer="alpha:true; antialias:true"
-    arjs="sourceType: webcam; debugUIEnabled:false">
+    arjs="sourceType: webcam; debugUIEnabled:false"
+    loading-screen="enabled:false">   <!-- 🔹 disables the blue loading overlay -->
 
-    <a-assets>
-      <!-- CHANGED: point to blue-screen version -->
+    <!-- 🔹 Don’t let a slow/blocked asset freeze the scene -->
+    <a-assets timeout="1">
+      <!-- BLUE-SCREEN video -->
       <video id="thembekaVideo"
              src="assets/thembeka_blue.mp4"
              loop
              playsinline
              webkit-playsinline
-             muted></video>
+             muted
+             preload="metadata"
+             crossorigin="anonymous"></video>
 
       <!-- Narration -->
       <audio id="thembekaAudio"
              src="assets/thembeka.mp3"
              preload="auto"
              playsinline
-             webkit-playsinline></audio>
+             webkit-playsinline
+             crossorigin="anonymous"></audio>
     </a-assets>
 
     <!-- Marker -->
@@ -140,7 +145,7 @@
 
     // --- Keep canvas size/position synced to the AR.js video (width:100% / height:auto model) ---
     function syncCanvasToVideo(){
-      const v = document.querySelector('video#arjs-video, video.arjs-video, video[playsinline]');
+      const v = document.querySelector('video#arjs-video, video.arjs-video');
       const c = document.querySelector('canvas.a-canvas');
       if (!v || !c) return;
 
