@@ -19,7 +19,7 @@
       overflow:hidden; background:#000; font-family:Arial,sans-serif;
     }
 
-    /* ✅ Only style the AR.js camera video (do NOT match all videos) */
+    /* Only style the AR.js camera video */
     video#arjs-video,
     video.arjs-video{
       position:fixed !important;
@@ -61,6 +61,7 @@
       position:fixed; inset:0;
       display:flex; flex-direction:column; align-items:center; justify-content:center;
       background:rgba(0,0,0,.9); color:#fff; z-index:3; text-align:center; padding:24px;
+      pointer-events:auto;
     }
     #start button{
       margin-top:12px; padding:12px 18px; font-size:16px; border-radius:8px; border:0;
@@ -81,7 +82,7 @@
   <div id="start">
     <h2>We’re Still Marching — AR Prototype</h2>
     <p>Tap Start, allow camera, then point at the printed <b>HIRO</b> marker.</p>
-    <button id="startBtn">Start</button>
+    <button id="startBtn" type="button">Start</button>
   </div>
 
   <!-- Fallback prompt if iOS still blocks audio -->
@@ -119,3 +120,4 @@
                src="#thembekaVideo"
                rotation="0 0 0"
                position="0 2 0"
+               width="6.2" height="7.2"
