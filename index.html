@@ -19,8 +19,8 @@
       overflow:hidden; background:#000; font-family:Arial,sans-serif;
     }
 
-    /* ✅ Only style the AR.js camera video (NOT every video on the page) */
-    video#arjs-video, video.arjs-video{
+    /* Only style the AR.js camera video (NOT every video on the page) */
+   video#arjs-video, video.arjs-video{
       position:fixed !important;
       top:0 !important; left:0 !important;
       width:100% !important; height:100% !important;
@@ -86,9 +86,9 @@
     vr-mode-ui="enabled:false"
     renderer="alpha:true; antialias:true"
     arjs="sourceType: webcam; debugUIEnabled:false"
-    loading-screen="enabled:false">   <!-- 🔹 disables the blue loading overlay -->
+    loading-screen="enabled:false">   <!--  disables the blue loading overlay -->
 
-    <!-- 🔹 Don’t let a slow/blocked asset freeze the scene -->
+    <!--  Don’t let a slow/blocked asset freeze the scene -->
     <a-assets timeout="1">
       <!-- BLUE-SCREEN video -->
       <video id="thembekaVideo"
@@ -211,3 +211,4 @@
   </script>
 </body>
 </html>
+
