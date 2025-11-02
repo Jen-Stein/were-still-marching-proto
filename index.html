@@ -64,4 +64,104 @@
   <!-- Start (unlocks audio & primes video on iOS) -->
   <div id="start">
     <h2>We’re Still Marching — AR Prototype</h2>
-    <p>Tap Start, allo
+    <p>Tap Start, allow camera, then point at the printed <b>HIRO</b> marker.</p>
+    <button id="startBtn">Start</button>
+  </div>
+
+  <!-- Fallback prompt if iOS still blocks audio -->
+  <button id="soundUnlock">Tap to enable sound</button>
+
+  <a-scene
+    embedded
+    vr-mode-ui="enabled:false"
+    renderer="alpha:true; antialias:true"
+    arjs="sourceType: webcam; debugUIEnabled:false"
+    loading-screen="enabled:false">
+
+    <!-- 🚫 Don’t let asset loading freeze the scene -->
+    <a-assets timeout="1">
+      <!-- Use ONE of these src values: blue-screen (for chroma) OR your original -->
+      <!-- <video id="thembekaVideo" src="assets/thembeka_blue.mp4" ... ></video> -->
+      <video id="thembekaVideo"
+             src="assets/thembeka_blue.mp4"
+             loop playsinline webkit-playsinline muted preload="metadata"></video>
+
+      <audio id="thembekaAudio"
+             src="assets/thembeka.mp3"
+             preload="auto" playsinline webkit-playsinline></audio>
+    </a-assets>
+
+    <!-- Marker -->
+    <a-marker id="marker" preset="hiro" emitevents="true"
+              smooth="true" smoothCount="10" smoothTolerance="0.01" smoothThreshold="5">
+
+      <!-- If you are NOT using a blue/green screen, REMOVE the material="" attribute -->
+      <a-video id="thembekaPoster"
+               src="#thembekaVideo"
+               rotation="0 0 0" position="0 2 0"
+               width="6.2" height="7.2"
+               material="shader: chromakey; color: 0 0 1; threshold: 0.35; smoothness: 0.08"
+               visible="false"></a-video>
+
+      <a-entity light="type: ambient; intensity: 1"></a-entity>
+      <a-entity light="type: directional; intensity: 0.6" position="1 2 1"></a-entity>
+    </a-marker>
+
+    <a-entity camera></a-entity>
+  </a-scene>
+
+  <script>
+    const startUI   = document.getElementById('start');
+    const startBtn  = document.getElementById('startBtn');
+    const unlockBtn = document.getElementById('soundUnlock');
+
+    const marker    = document.getElementById('marker');
+    const poster    = document.getElementById('thembekaPoster');
+    const videoEl   = document.getElementById('thembekaVideo');
+    const audioEl   = document.getElementById('thembekaAudio');
+
+    let userPrimed = false;
+    let markerVisible = false;
+    let lostTimer = null;
+
+    // Your original Start handler (unchanged)
+    startBtn.addEventListener('click', async () => {
+      try {
+        await videoEl.play(); videoEl.pause(); videoEl.currentTime = 0;
+        await audioEl.play(); audioEl.pause(); audioEl.currentTime = 0;
+      } catch(_) {}
+      userPrimed = true;
+      startUI.style.display = 'none';
+    });
+
+    // Marker events (unchanged)
+    marker.addEventListener('markerFound', () => {
+      markerVisible = true;
+      if (lostTimer) { clearTimeout(lostTimer); lostTimer = null; }
+      poster.setAttribute('visible','true');
+      videoEl.play().catch(()=>{});
+      if (userPrimed) {
+        audioEl.play().catch(()=>{ unlockBtn.style.display = 'block'; });
+      } else {
+        unlockBtn.style.display = 'block';
+      }
+    });
+
+    marker.addEventListener('markerLost', () => {
+      markerVisible = false;
+      lostTimer = setTimeout(() => {
+        if (!markerVisible) {
+          poster.setAttribute('visible','false');
+          videoEl.pause(); videoEl.currentTime = 0;
+          audioEl.pause(); audioEl.currentTime = 0;
+        }
+      }, 500);
+    });
+
+    // Manual audio unlock
+    unlockBtn.addEventListener('click', () => {
+      audioEl.play().then(()=> unlockBtn.style.display = 'none').catch(()=>{});
+    });
+  </script>
+</body>
+</html>
