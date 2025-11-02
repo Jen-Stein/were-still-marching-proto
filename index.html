@@ -3,95 +3,73 @@
 <head>
   <meta charset="utf-8" />
   <title>We’re Still Marching</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
 
   <!-- A-Frame -->
   <script src="https://aframe.io/releases/1.2.0/aframe.min.js"></script>
-  <!-- AR.js for A-Frame -->
+  <!-- AR.js for A-Frame (marker-based) -->
   <script src="https://cdn.jsdelivr.net/gh/AR-js-org/AR.js/aframe/build/aframe-ar.js"></script>
 
   <style>
-    html, body { margin:0; padding:0; width:100%; height:100%; overflow:hidden; background:#000; font-family:Arial,sans-serif; }
-
-    /* Camera video behind, tiny overscan to kill the right seam */
-    video#arjs-video, video.arjs-video, video[playsinline]{
-      position:fixed !important;
-      top:0 !important; left:-1px !important;
-      width:calc(100vw + 2px) !important;
-      height:100vh !important;
-      object-fit:cover !important;
-      z-index:0 !important;
-      background:#000 !important;
-    }
-
-    /* WebGL canvas on top, same geometry */
-    a-scene, .a-canvas, canvas{
-      position:fixed !important;
-      top:0 !important; left:-1px !important;
-      width:calc(100vw + 2px) !important;
-      height:100vh !important;
-      background:transparent !important;
-      z-index:1 !important;
+    /* Keep it minimal like your friend’s setup */
+    html, body {
+      height: 100%;
+      margin: 0;
+      overflow: hidden;
+      font-family: Arial, sans-serif;
+      background: #000; /* safe fallback while camera starts */
     }
 
     /* Start overlay */
-    #start{
-      position:fixed; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center;
-      background:rgba(0,0,0,.9); color:#fff; z-index:3; text-align:center; padding:24px;
+    #start {
+      position: fixed; inset: 0;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      background: rgba(0,0,0,0.9); color:#fff; z-index: 10; text-align: center; padding: 24px;
     }
-    #start button{
-      margin-top:12px; padding:12px 18px; font-size:16px; border-radius:8px; border:0;
-      background:#ff6b6b; color:#fff;
+    #start button {
+      margin-top: 12px; padding: 12px 18px; font-size: 16px; border-radius: 8px;
+      border: 0; background: #ff6b6b; color: #fff;
     }
 
-    /* Fallback audio unlock */
-    #soundUnlock{
-      position:fixed; bottom:14px; left:50%; transform:translateX(-50%);
-      z-index:3; background:rgba(0,0,0,.7); color:#fff; border:1px solid #fff;
-      padding:10px 14px; border-radius:8px; font-size:14px; display:none;
+    /* Tiny helper UI (optional) */
+    .ui {
+      position: absolute; top: 12px; left: 12px; z-index: 5;
+      background: rgba(255,255,255,0.95); padding: 10px 12px; border-radius: 10px;
+      font-size: 13px; color:#111; line-height: 1.45;
+      box-shadow: 0 4px 12px rgba(0,0,0,.25);
     }
   </style>
 </head>
 <body>
 
-  <!-- Start (unlocks audio & primes video on iOS) -->
+  <!-- Simple helper text (like your friend’s) -->
+  <div class="ui">
+    1) Tap Start and allow camera<br>
+    2) Point at the printed <b>HIRO</b> marker<br>
+    3) Audio plays when the marker is found
+  </div>
+
+  <!-- Start gate: gives iOS the required user gesture for audio -->
   <div id="start">
     <h2>We’re Still Marching — AR Prototype</h2>
-    <p>Tap Start, allow camera, then point at the printed <b>HIRO</b> marker.</p>
+    <p>Tap Start, allow the camera, then scan the <b>HIRO</b> marker.</p>
     <button id="startBtn">Start</button>
   </div>
 
-  <!-- Fallback prompt if iOS still blocks audio -->
-  <button id="soundUnlock">Tap to enable sound</button>
-
-  <a-scene
-    embedded
-    vr-mode-ui="enabled:false"
-    renderer="alpha:true; antialias:true"
-    arjs="sourceType: webcam; debugUIEnabled:false">
-
+  <a-scene embedded arjs="sourceType: webcam; debugUIEnabled: false;">
     <a-assets>
-      <!-- Video (muted, loops) -->
+      <!-- Your looping character video (muted for autoplay) -->
       <video id="thembekaVideo"
              src="assets/thembeka.mp4"
              loop
              playsinline
              webkit-playsinline
              muted></video>
-
-      <!-- Narration -->
-      <audio id="thembekaAudio"
-             src="assets/thembeka.mp3"
-             preload="auto"
-             playsinline
-             webkit-playsinline></audio>
     </a-assets>
 
-    <!-- Marker -->
-    <a-marker id="marker" preset="hiro" emitevents="true"
-              smooth="true" smoothCount="10" smoothTolerance="0.01" smoothThreshold="5">
-
-      <!-- Fix text backwards: face camera with no 180 flip -->
+    <!-- Marker (keep it simple like your friend’s) -->
+    <a-marker preset="hiro" emitevents="true" id="marker">
+      <!-- Upright & facing camera. If text appears mirrored, switch to: scale='-1 1 1' rotation='0 0 0' -->
       <a-video id="thembekaPoster"
                src="#thembekaVideo"
                rotation="0 0 0"
@@ -99,8 +77,11 @@
                width="6.2" height="7.2"
                visible="false"></a-video>
 
+      <!-- Attach positional audio to the marker (so it follows the object) -->
+      <a-entity id="vo" sound="src: url(assets/thembeka.mp3); autoplay: false; loop: false; positional: true; volume: 1"></a-entity>
+
+      <!-- Optional light (harmless for 2D) -->
       <a-entity light="type: ambient; intensity: 1"></a-entity>
-      <a-entity light="type: directional; intensity: 0.6" position="1 2 1"></a-entity>
     </a-marker>
 
     <a-entity camera></a-entity>
@@ -109,56 +90,57 @@
   <script>
     const startUI   = document.getElementById('start');
     const startBtn  = document.getElementById('startBtn');
-    const unlockBtn = document.getElementById('soundUnlock');
 
     const marker    = document.getElementById('marker');
     const poster    = document.getElementById('thembekaPoster');
     const videoEl   = document.getElementById('thembekaVideo');
-    const audioEl   = document.getElementById('thembekaAudio');
+    const voEntity  = document.getElementById('vo');
 
-    let userPrimed = false;
+    let primed = false;
     let markerVisible = false;
     let lostTimer = null;
 
-    // Start: prime media with a user gesture
+    // 1) Prime media on user gesture (satisfies iOS audio rules)
     startBtn.addEventListener('click', async () => {
       try {
         await videoEl.play(); videoEl.pause(); videoEl.currentTime = 0;
-        await audioEl.play(); audioEl.pause(); audioEl.currentTime = 0;
+        // pre-warm a-sound by calling playSound then stop it immediately
+        voEntity.components.sound.playSound();
+        setTimeout(()=>voEntity.components.sound.stopSound(), 10);
       } catch(_) {}
-      userPrimed = true;
+      primed = true;
       startUI.style.display = 'none';
     });
 
-    // Marker events
+    // 2) Marker events (keep it simple)
     marker.addEventListener('markerFound', () => {
       markerVisible = true;
       if (lostTimer) { clearTimeout(lostTimer); lostTimer = null; }
-      poster.setAttribute('visible','true');
+
+      poster.setAttribute('visible', 'true');
       videoEl.play().catch(()=>{});
-      if (userPrimed) {
-        audioEl.play().catch(()=>{ unlockBtn.style.display = 'block'; });
-      } else {
-        unlockBtn.style.display = 'block';
+
+      if (primed) {
+        // play positional audio once when marker is found
+        voEntity.components.sound.stopSound(); // ensure clean start
+        voEntity.components.sound.playSound();
       }
     });
 
     marker.addEventListener('markerLost', () => {
       markerVisible = false;
+      // Debounce a touch to avoid flicker pauses
       lostTimer = setTimeout(() => {
         if (!markerVisible) {
-          poster.setAttribute('visible','false');
+          poster.setAttribute('visible', 'false');
           videoEl.pause(); videoEl.currentTime = 0;
-          audioEl.pause(); audioEl.currentTime = 0;
+          voEntity.components.sound.stopSound();
         }
-      }, 500);
+      }, 400);
     });
 
-    unlockBtn.addEventListener('click', () => {
-      audioEl.play().then(()=> unlockBtn.style.display = 'none').catch(()=>{});
-    });
+    // 3) If the video looks mirrored on the marker, uncomment this one-liner:
+    // poster.setAttribute('scale', '-1 1 1'); poster.setAttribute('rotation', '0 0 0');
   </script>
 </body>
 </html>
-
-
