@@ -19,28 +19,103 @@
       overflow:hidden; background:#000; font-family:Arial,sans-serif;
     }
 
-    /* Let AR.js place the camera video; we only say: full width, auto height */
-    video#arjs-video, video.arjs-video, video[playsinline]{
+    /* ✅ Only style the AR.js camera video (do NOT match all videos) */
+    video#arjs-video,
+    video.arjs-video{
       position:fixed !important;
       top:0 !important;
       left:0 !important;
       width:100% !important;
-      height:100% !important;   /* make sure it fills the screen */
-      object-fit:cover !important;  /* crops edges instead of letterboxing */
+      height:100% !important;
+      object-fit:cover !important;
       z-index:0 !important;
       background:#000 !important;
       transform:none !important;
     }
 
-    /* Keep the scene on top, but DON'T force sizes here */
+    /* Hide asset media so they never paint on screen */
+    a-assets > video,
+    a-assets > audio { display:none; }
+
+    /* Keep the scene on top */
     a-scene[embedded]{
       position:fixed !important;
       top:0 !important; left:0 !important;
-      right:auto !important; bottom:auto !important;
       background:transparent !important;
       z-index:1 !important;
     }
 
-    /* The actual WebGL canvas — we’ll sync its size/pos to the video via JS */
+    /* WebGL canvas */
     .a-canvas, canvas.a-canvas{
-      p
+      position:fixed !important;
+      top:0; left:0;
+      width:100% !important;
+      height:auto !important;
+      background:transparent !important;
+      z-index:1 !important;
+      transform:none !important;
+    }
+
+    /* Start overlay */
+    #start{
+      position:fixed; inset:0;
+      display:flex; flex-direction:column; align-items:center; justify-content:center;
+      background:rgba(0,0,0,.9); color:#fff; z-index:3; text-align:center; padding:24px;
+    }
+    #start button{
+      margin-top:12px; padding:12px 18px; font-size:16px; border-radius:8px; border:0;
+      background:#ff6b6b; color:#fff; cursor:pointer;
+    }
+
+    /* Fallback audio unlock */
+    #soundUnlock{
+      position:fixed; bottom:14px; left:50%; transform:translateX(-50%);
+      z-index:3; background:rgba(0,0,0,.7); color:#fff; border:1px solid #fff;
+      padding:10px 14px; border-radius:8px; font-size:14px; display:none;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Start (unlocks audio & primes video on iOS) -->
+  <div id="start">
+    <h2>We’re Still Marching — AR Prototype</h2>
+    <p>Tap Start, allow camera, then point at the printed <b>HIRO</b> marker.</p>
+    <button id="startBtn">Start</button>
+  </div>
+
+  <!-- Fallback prompt if iOS still blocks audio -->
+  <button id="soundUnlock">Tap to enable sound</button>
+
+  <a-scene
+    embedded
+    vr-mode-ui="enabled:false"
+    renderer="alpha:true; antialias:true"
+    arjs="sourceType: webcam; debugUIEnabled:false">
+
+    <a-assets>
+      <!-- BLUE-SCREEN video (muted, loops) -->
+      <video id="thembekaVideo"
+             src="assets/thembeka_blue.mp4"
+             loop
+             playsinline
+             webkit-playsinline
+             muted></video>
+
+      <!-- Narration -->
+      <audio id="thembekaAudio"
+             src="assets/thembeka.mp3"
+             preload="auto"
+             playsinline
+             webkit-playsinline></audio>
+    </a-assets>
+
+    <!-- Marker -->
+    <a-marker id="marker" preset="hiro" emitevents="true"
+              smooth="true" smoothCount="10" smoothTolerance="0.01" smoothThreshold="5">
+
+      <!-- Video plane with CHROMA KEY (blue keyed out) -->
+      <a-video id="thembekaPoster"
+               src="#thembekaVideo"
+               rotation="0 0 0"
+               position="0 2 0"
