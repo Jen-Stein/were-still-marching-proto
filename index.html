@@ -9,7 +9,7 @@
   <script src="https://aframe.io/releases/1.2.0/aframe.min.js"></script>
   <!-- AR.js for A-Frame -->
   <script src="https://cdn.jsdelivr.net/gh/AR-js-org/AR.js/aframe/build/aframe-ar.js"></script>
-  <!-- Chroma-key material -->
+  <!-- ONLY ADD: chroma-key material -->
   <script src="https://unpkg.com/aframe-chromakey-material@1.0.6/dist/aframe-chromakey-material.min.js"></script>
 
   <style>
@@ -19,49 +19,52 @@
       overflow:hidden; background:#000; font-family:Arial,sans-serif;
     }
 
-    /* Only style the AR.js camera video */
-    video#arjs-video, video.arjs-video{
+    /* Keep exactly as you had it */
+    video#arjs-video, video.arjs-video, video[playsinline]{
       position:fixed !important;
-      top:0 !important; left:0 !important;
-      width:100% !important; height:100% !important;
-      object-fit:cover !important;
-      z-index:0 !important; background:#000 !important;
+      top:0 !important;
+      left:0 !important;
+      width:100% !important;
+      height:100% !important;   /* <—— make sure it fills the screen */
+      object-fit:cover !important;  /* crops edges instead of letterboxing */
+      z-index:0 !important;
+      background:#000 !important;
       transform:none !important;
     }
 
-    /* Keep the scene on top */
     a-scene[embedded]{
       position:fixed !important;
       top:0 !important; left:0 !important;
+      right:auto !important; bottom:auto !important;
       background:transparent !important;
       z-index:1 !important;
     }
 
-    /* WebGL canvas */
     .a-canvas, canvas.a-canvas{
       position:fixed !important;
       top:0; left:0;
-      width:100% !important; height:auto !important;
+      width:100% !important;   /* start aligned with video width */
+      height:auto !important;  /* JS will correct exact pixel height */
       background:transparent !important;
-      z-index:1 !important; transform:none !important;
+      z-index:1 !important;
+      transform:none !important;
     }
 
     /* Start overlay */
     #start{
       position:fixed; inset:0;
       display:flex; flex-direction:column; align-items:center; justify-content:center;
-      background:rgba(0,0,0,.9); color:#fff; z-index:9999; text-align:center; padding:24px;
-      pointer-events:auto;
+      background:rgba(0,0,0,.9); color:#fff; z-index:3; text-align:center; padding:24px;
     }
     #start button{
       margin-top:12px; padding:12px 18px; font-size:16px; border-radius:8px; border:0;
-      background:#ff6b6b; color:#fff; cursor:pointer;
+      background:#ff6b6b; color:#fff;
     }
 
     /* Fallback audio unlock */
     #soundUnlock{
       position:fixed; bottom:14px; left:50%; transform:translateX(-50%);
-      z-index:9999; background:rgba(0,0,0,.7); color:#fff; border:1px solid #fff;
+      z-index:3; background:rgba(0,0,0,.7); color:#fff; border:1px solid #fff;
       padding:10px 14px; border-radius:8px; font-size:14px; display:none;
     }
   </style>
@@ -72,8 +75,7 @@
   <div id="start">
     <h2>We’re Still Marching — AR Prototype</h2>
     <p>Tap Start, allow camera, then point at the printed <b>HIRO</b> marker.</p>
-    <!-- Inline call is the most reliable on iOS -->
-    <button id="startBtn" type="button" onclick="handleStart()">Start</button>
+    <button id="startBtn">Start</button>
   </div>
 
   <!-- Fallback prompt if iOS still blocks audio -->
@@ -86,23 +88,27 @@
     arjs="sourceType: webcam; debugUIEnabled:false">
 
     <a-assets>
-      <!-- Move asset media off-screen instead of display:none (iOS quirk) -->
+      <!-- CHANGED: point to blue-screen version -->
       <video id="thembekaVideo"
              src="assets/thembeka_blue.mp4"
-             loop playsinline webkit-playsinline muted
-             style="position:absolute; left:-99999px; top:auto; width:1px; height:1px; opacity:0;"></video>
+             loop
+             playsinline
+             webkit-playsinline
+             muted></video>
 
+      <!-- Narration -->
       <audio id="thembekaAudio"
              src="assets/thembeka.mp3"
-             preload="auto" playsinline webkit-playsinline
-             style="position:absolute; left:-99999px; top:auto; width:1px; height:1px; opacity:0;"></audio>
+             preload="auto"
+             playsinline
+             webkit-playsinline></audio>
     </a-assets>
 
     <!-- Marker -->
     <a-marker id="marker" preset="hiro" emitevents="true"
               smooth="true" smoothCount="10" smoothTolerance="0.01" smoothThreshold="5">
 
-      <!-- Video plane with CHROMA KEY (blue keyed out) -->
+      <!-- CHANGED: add chroma-key material (blue keyed out) -->
       <a-video id="thembekaPoster"
                src="#thembekaVideo"
                rotation="0 0 0"
@@ -132,12 +138,14 @@
     let markerVisible = false;
     let lostTimer = null;
 
-    // Keep canvas size/position synced to the AR.js video
+    // --- Keep canvas size/position synced to the AR.js video (width:100% / height:auto model) ---
     function syncCanvasToVideo(){
-      const v = document.querySelector('video#arjs-video, video.arjs-video');
+      const v = document.querySelector('video#arjs-video, video.arjs-video, video[playsinline]');
       const c = document.querySelector('canvas.a-canvas');
       if (!v || !c) return;
+
       const r = v.getBoundingClientRect();
+      // Mirror the video's box onto the canvas so they match exactly
       c.style.position = 'fixed';
       c.style.top  = r.top + 'px';
       c.style.left = r.left + 'px';
@@ -145,38 +153,33 @@
       c.style.height = r.height + 'px';
     }
 
-    const bootSync = setInterval(syncCanvasToVideo, 100);
+    // Try repeatedly during boot (AR.js injects video late)
+    const bootSync = setInterval(() => {
+      syncCanvasToVideo();
+    }, 100);
     setTimeout(() => clearInterval(bootSync), 4000);
+
+    // Also resync on resize / orientation change
     window.addEventListener('resize', syncCanvasToVideo);
     window.addEventListener('orientationchange', () => setTimeout(syncCanvasToVideo, 300));
 
-    // ✅ Inline-click handler must be global
-    function handleStart(){
-      // Visual feedback (optional)
-      startBtn.disabled = true;
-      startBtn.textContent = 'Loading…';
-
+    // Start: prime media with a user gesture (unchanged from your original)
+    startBtn.addEventListener('click', async () => {
+      try {
+        await videoEl.play(); videoEl.pause(); videoEl.currentTime = 0;
+        await audioEl.play(); audioEl.pause(); audioEl.currentTime = 0;
+      } catch(_) {}
       userPrimed = true;
       startUI.style.display = 'none';
-
-      // Required for autoplay
-      videoEl.muted = true;
-
-      // Best-effort pre-play, no awaits (iOS-safe)
-      videoEl.play().then(() => { videoEl.pause(); videoEl.currentTime = 0; }).catch(()=>{});
-      audioEl.play().then(() => { audioEl.pause(); audioEl.currentTime = 0; }).catch(()=>{});
-
+      // One more sync after UI disappears
       setTimeout(syncCanvasToVideo, 200);
-    }
-    // expose globally for inline onclick
-    window.handleStart = handleStart;
+    });
 
     // Marker events
     marker.addEventListener('markerFound', () => {
       markerVisible = true;
       if (lostTimer) { clearTimeout(lostTimer); lostTimer = null; }
       poster.setAttribute('visible','true');
-
       videoEl.play().catch(()=>{});
       if (userPrimed) {
         audioEl.play().catch(()=>{ unlockBtn.style.display = 'block'; });
