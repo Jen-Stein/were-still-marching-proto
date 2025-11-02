@@ -9,6 +9,8 @@
   <script src="https://aframe.io/releases/1.2.0/aframe.min.js"></script>
   <!-- AR.js for A-Frame -->
   <script src="https://cdn.jsdelivr.net/gh/AR-js-org/AR.js/aframe/build/aframe-ar.js"></script>
+  <!-- Chroma-key material (for keying out pure blue) -->
+  <script src="https://unpkg.com/aframe-chromakey-material@1.0.6/dist/aframe-chromakey-material.min.js"></script>
 
   <style>
     html, body {
@@ -16,14 +18,14 @@
       overflow:hidden; background:#000; font-family:Arial,sans-serif;
     }
 
-    /* Only the AR.js camera video */
+    /* Only style the AR.js camera video (do NOT target every <video>) */
     video#arjs-video, video.arjs-video{
       position:fixed; top:0; left:0;
       width:100%; height:100%;
       object-fit:cover; z-index:0; background:#000;
     }
 
-    /* Scene & canvas on top, full size (no JS syncing) */
+    /* Scene & canvas on top, full size */
     a-scene[embedded]{
       position:fixed; top:0; left:0; width:100%; height:100%;
       background:transparent; z-index:1;
@@ -58,34 +60,44 @@
   <div id="start">
     <h2>We’re Still Marching — AR Prototype</h2>
     <p>Tap Start, allow camera, then point at the printed <b>HIRO</b> marker.</p>
-    <button id="startBtn">Start</button>
+    <!-- Inline handler is the most reliable on iOS -->
+    <button id="startBtn" type="button" onclick="handleStart()">Start</button>
   </div>
 
+  <!-- Fallback prompt if iOS still blocks audio -->
   <button id="soundUnlock">Tap to enable sound</button>
 
   <a-scene
     embedded
     vr-mode-ui="enabled:false"
     renderer="alpha:true; antialias:true"
-    arjs="sourceType: webcam; debugUIEnabled:false">
+    arjs="sourceType: webcam; debugUIEnabled:false"
+    loading-screen="enabled:false">
 
     <a-assets>
+      <!-- BLUE-SCREEN video (muted for iOS autoplay) -->
       <video id="thembekaVideo"
-             src="assets/thembeka.mp4"
-             loop playsinline webkit-playsinline muted></video>
+             src="assets/thembeka_blue.mp4"
+             loop playsinline webkit-playsinline muted
+             preload="metadata"></video>
 
+      <!-- Narration -->
       <audio id="thembekaAudio"
              src="assets/thembeka.mp3"
              preload="auto" playsinline webkit-playsinline></audio>
     </a-assets>
 
+    <!-- Marker -->
     <a-marker id="marker" preset="hiro" emitevents="true"
               smooth="true" smoothCount="10" smoothTolerance="0.01" smoothThreshold="5">
 
+      <!-- Video plane with CHROMA KEY (pure blue keyed out) -->
       <a-video id="thembekaPoster"
                src="#thembekaVideo"
-               rotation="0 0 0" position="0 2 0"
+               rotation="0 0 0"
+               position="0 2 0"
                width="6.2" height="7.2"
+               material="shader: chromakey; color: 0 0 1; threshold: 0.35; smoothness: 0.08"
                visible="false"></a-video>
 
       <a-entity light="type: ambient; intensity: 1"></a-entity>
@@ -109,18 +121,47 @@
     let markerVisible = false;
     let lostTimer = null;
 
-    // Start button — unchanged from your original
-    startBtn.addEventListener('click', async () => {
-      try {
-        await videoEl.play(); videoEl.pause(); videoEl.currentTime = 0;
-        await audioEl.play(); audioEl.pause(); audioEl.currentTime = 0;
-      } catch(_) {}
+    // ✅ Robust Start: hide immediately, do not await media (prevents iOS hangs)
+    function handleStart(){
       userPrimed = true;
       startUI.style.display = 'none';
-    });
+      // Make autoplay possible
+      videoEl.muted = true;
 
-    // Marker events — unchanged
+      // Best-effort prime (fire-and-forget)
+      videoEl.play().then(()=>{ videoEl.pause(); videoEl.currentTime = 0; }).catch(()=>{});
+      audioEl.play().then(()=>{ audioEl.pause(); audioEl.currentTime = 0; }).catch(()=>{});
+    }
+    window.handleStart = handleStart; // expose for inline onclick
+
+    // Marker events (unchanged behaviour)
     marker.addEventListener('markerFound', () => {
       markerVisible = true;
       if (lostTimer) { clearTimeout(lostTimer); lostTimer = null; }
-      poster.setAttribute('visible','tru
+      poster.setAttribute('visible','true');
+      videoEl.play().catch(()=>{});
+      if (userPrimed) {
+        audioEl.play().catch(()=>{ unlockBtn.style.display = 'block'; });
+      } else {
+        unlockBtn.style.display = 'block';
+      }
+    });
+
+    marker.addEventListener('markerLost', () => {
+      markerVisible = false;
+      lostTimer = setTimeout(() => {
+        if (!markerVisible) {
+          poster.setAttribute('visible','false');
+          videoEl.pause(); videoEl.currentTime = 0;
+          audioEl.pause(); audioEl.currentTime = 0;
+        }
+      }, 500);
+    });
+
+    // Manual audio unlock
+    unlockBtn.addEventListener('click', () => {
+      audioEl.play().then(()=> unlockBtn.style.display = 'none').catch(()=>{});
+    });
+  </script>
+</body>
+</html>
