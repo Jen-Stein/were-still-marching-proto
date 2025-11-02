@@ -17,20 +17,43 @@
       overflow:hidden; background:#000; font-family:Arial,sans-serif;
     }
 
-    /* Minimal: let AR.js size the video; put scene on top full-bleed */
-    a-scene[embedded] { position:fixed; inset:0; }
+    /* Let AR.js place the camera video; we only say: full width, auto height */
+    video#arjs-video, video.arjs-video, video[playsinline]{
+      position:fixed !important;
+      top:0 !important; left:0 !important;
+      width:100% !important;
+      height:auto !important;
+      z-index:0 !important;
+      background:#000 !important;
+      object-fit:cover !important; /* harmless if height:auto */
+      transform:none !important;
+    }
 
-    /* Mask a stubborn 1–3px seam on the right edge (doesn't affect layout) */
-    #edgeMask {
-      position:fixed; top:0; right:0; height:100vh; width:3px;
-      background:#000; z-index:9; pointer-events:none;
+    /* Keep the scene on top, but DON'T force sizes here */
+    a-scene[embedded]{
+      position:fixed !important;
+      top:0 !important; left:0 !important;
+      right:auto !important; bottom:auto !important;
+      background:transparent !important;
+      z-index:1 !important;
+    }
+
+    /* The actual WebGL canvas — we’ll sync its size/pos to the video via JS */
+    .a-canvas, canvas.a-canvas{
+      position:fixed !important;
+      top:0; left:0;
+      width:100% !important;   /* start aligned with video width */
+      height:auto !important;  /* JS will correct exact pixel height */
+      background:transparent !important;
+      z-index:1 !important;
+      transform:none !important;
     }
 
     /* Start overlay */
     #start{
       position:fixed; inset:0;
       display:flex; flex-direction:column; align-items:center; justify-content:center;
-      background:rgba(0,0,0,.9); color:#fff; z-index:10; text-align:center; padding:24px;
+      background:rgba(0,0,0,.9); color:#fff; z-index:3; text-align:center; padding:24px;
     }
     #start button{
       margin-top:12px; padding:12px 18px; font-size:16px; border-radius:8px; border:0;
@@ -40,15 +63,12 @@
     /* Fallback audio unlock */
     #soundUnlock{
       position:fixed; bottom:14px; left:50%; transform:translateX(-50%);
-      z-index:10; background:rgba(0,0,0,.7); color:#fff; border:1px solid #fff;
+      z-index:3; background:rgba(0,0,0,.7); color:#fff; border:1px solid #fff;
       padding:10px 14px; border-radius:8px; font-size:14px; display:none;
     }
   </style>
 </head>
 <body>
-
-  <!-- Seam mask (purely visual) -->
-  <div id="edgeMask" aria-hidden="true"></div>
 
   <!-- Start (unlocks audio & primes video on iOS) -->
   <div id="start">
@@ -87,7 +107,7 @@
     <a-marker id="marker" preset="hiro" emitevents="true"
               smooth="true" smoothCount="10" smoothTolerance="0.01" smoothThreshold="5">
 
-      <!-- Upright & NOT mirrored (your current good orientation) -->
+      <!-- Upright & facing camera (your “correct” orientation) -->
       <a-video id="thembekaPoster"
                src="#thembekaVideo"
                rotation="0 0 0"
@@ -116,6 +136,31 @@
     let markerVisible = false;
     let lostTimer = null;
 
+    // --- Keep canvas size/position synced to the AR.js video (width:100% / height:auto model) ---
+    function syncCanvasToVideo(){
+      const v = document.querySelector('video#arjs-video, video.arjs-video, video[playsinline]');
+      const c = document.querySelector('canvas.a-canvas');
+      if (!v || !c) return;
+
+      const r = v.getBoundingClientRect();
+      // Mirror the video's box onto the canvas so they match exactly
+      c.style.position = 'fixed';
+      c.style.top  = r.top + 'px';
+      c.style.left = r.left + 'px';
+      c.style.width  = r.width + 'px';
+      c.style.height = r.height + 'px';
+    }
+
+    // Try repeatedly during boot (AR.js injects video late)
+    const bootSync = setInterval(() => {
+      syncCanvasToVideo();
+    }, 100);
+    setTimeout(() => clearInterval(bootSync), 4000);
+
+    // Also resync on resize / orientation change
+    window.addEventListener('resize', syncCanvasToVideo);
+    window.addEventListener('orientationchange', () => setTimeout(syncCanvasToVideo, 300));
+
     // Start: prime media with a user gesture
     startBtn.addEventListener('click', async () => {
       try {
@@ -124,6 +169,8 @@
       } catch(_) {}
       userPrimed = true;
       startUI.style.display = 'none';
+      // One more sync after UI disappears
+      setTimeout(syncCanvasToVideo, 200);
     });
 
     // Marker events
@@ -150,6 +197,7 @@
       }, 500);
     });
 
+    // Manual audio unlock
     unlockBtn.addEventListener('click', () => {
       audioEl.play().then(()=> unlockBtn.style.display = 'none').catch(()=>{});
     });
