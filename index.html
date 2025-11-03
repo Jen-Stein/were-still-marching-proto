@@ -9,7 +9,7 @@
   <script src="https://aframe.io/releases/1.2.0/aframe.min.js"></script>
   <script src="https://cdn.jsdelivr.net/gh/AR-js-org/AR.js/aframe/build/aframe-ar.js"></script>
 
-  <!-- GIF shader -->
+  <!-- GIF shader (for the Thembeka transparent GIF) -->
   <script src="https://unpkg.com/aframe-gif-shader/dist/aframe-gif-shader.min.js"></script>
 
   <style>
@@ -57,7 +57,7 @@
 
   <div id="start">
     <h2>We’re Still Marching — AR Prototype</h2>
-    <p>Tap Start, allow camera, then point at the printed <b>HIRO</b> marker.</p>
+    <p>Tap Start, allow camera, then point at the printed <b>KANJI</b> or <b>HIRO</b> marker.</p>
     <button id="startBtn">Start</button>
   </div>
 
@@ -71,16 +71,35 @@
     loading-screen="enabled:false">
 
     <a-assets timeout="1">
+      <!-- INTRO stop assets (KANJI marker) -->
+      <img id="introPosterImg" src="assets/into-poster.png" crossorigin="anonymous">
+      <audio id="introAudio" src="assets/intro_audio.mp3" preload="auto" playsinline webkit-playsinline></audio>
+
+      <!-- THEMBEKA stop assets (HIRO marker) -->
       <img id="thembekaGif" src="assets/thembeka_small.gif" crossorigin="anonymous">
-      <audio id="thembekaAudio"
-             src="assets/thembeka_audio.mp3"
-             preload="auto" playsinline webkit-playsinline></audio>
+      <audio id="thembekaAudio" src="assets/thembeka_audio.mp3" preload="auto" playsinline webkit-playsinline></audio>
     </a-assets>
 
-    <a-marker id="marker" preset="hiro" emitevents="true"
+    <!-- ====== INTRO STOP: KANJI marker ====== -->
+    <a-marker id="introMarker" preset="kanji" emitevents="true"
               smooth="true" smoothCount="10" smoothTolerance="0.01" smoothThreshold="5">
 
-      <!-- Transparent GIF -->
+      <!-- Intro poster: placed higher above the marker (y = 3.5) -->
+      <a-image id="introPoster"
+               src="#introPosterImg"
+               position="0 3.5 0" rotation="0 0 0"
+               width="6.2" height="7.2"
+               visible="false"></a-image>
+
+      <a-entity light="type: ambient; intensity: 1"></a-entity>
+      <a-entity light="type: directional; intensity: 0.6" position="1 2 1"></a-entity>
+    </a-marker>
+
+    <!-- ====== THEMBEKA STOP: HIRO marker ====== -->
+    <a-marker id="thembekaMarker" preset="hiro" emitevents="true"
+              smooth="true" smoothCount="10" smoothTolerance="0.01" smoothThreshold="5">
+
+      <!-- Transparent GIF plane -->
       <a-plane id="thembekaPoster"
                position="0 2 0" rotation="0 0 0"
                width="6.2" height="7.2"
@@ -95,19 +114,23 @@
   </a-scene>
 
   <script>
-    const startUI   = document.getElementById('start');
-    const startBtn  = document.getElementById('startBtn');
-    const unlockBtn = document.getElementById('soundUnlock');
+    const startUI     = document.getElementById('start');
+    const startBtn    = document.getElementById('startBtn');
+    const unlockBtn   = document.getElementById('soundUnlock');
 
-    const marker    = document.getElementById('marker');
-    const poster    = document.getElementById('thembekaPoster');
-    const audioEl   = document.getElementById('thembekaAudio');
+    // INTRO stop elements
+    const introMarker = document.getElementById('introMarker');
+    const introPoster = document.getElementById('introPoster');
+    const introAudio  = document.getElementById('introAudio');
+
+    // THEMBEKA stop elements
+    const thembekaMarker = document.getElementById('thembekaMarker');
+    const thembekaPoster = document.getElementById('thembekaPoster');
+    const thembekaAudio  = document.getElementById('thembekaAudio');
 
     let userPrimed = false;
-    let markerVisible = false;
-    let lostTimer = null;
 
-    /* Sync canvas to camera */
+    /* Sync canvas to camera (kept from your setup) */
     function syncCanvasToVideo(){
       const v = document.querySelector('video#arjs-video, video.arjs-video');
       const c = document.querySelector('canvas.a-canvas');
@@ -123,40 +146,60 @@
     window.addEventListener('resize', syncCanvasToVideo);
     window.addEventListener('orientationchange', ()=>setTimeout(syncCanvasToVideo,300));
 
+    /* Helper: stop all audio, then play one (prevents overlap) */
+    function playOnly(audioEl){
+      [introAudio, thembekaAudio].forEach(a => { try { a.pause(); a.currentTime = 0; } catch(_){} });
+      if (userPrimed) {
+        audioEl.play().catch(()=>{ unlockBtn.style.display = 'block'; });
+      } else {
+        unlockBtn.style.display = 'block';
+      }
+    }
+
     /* Start */
     startBtn.addEventListener('click', async () => {
-      try { await audioEl.play(); audioEl.pause(); audioEl.currentTime = 0; } catch(_) {}
+      try {
+        // prime both audios so either can play later
+        await introAudio.play(); introAudio.pause(); introAudio.currentTime = 0;
+        await thembekaAudio.play(); thembekaAudio.pause(); thembekaAudio.currentTime = 0;
+      } catch(_) {}
       userPrimed = true;
       startUI.style.display = 'none';
       setTimeout(syncCanvasToVideo, 200);
     });
 
-    /* Marker events */
-    marker.addEventListener('markerFound', () => {
-      markerVisible = true;
-      if (lostTimer) { clearTimeout(lostTimer); lostTimer = null; }
-      poster.setAttribute('visible','true');
-      if (userPrimed) {
-        audioEl.play().catch(()=>{ unlockBtn.style.display = 'block'; });
-      } else { unlockBtn.style.display = 'block'; }
+    /* ===== INTRO marker events (KANJI) ===== */
+    introMarker.addEventListener('markerFound', () => {
+      introPoster.setAttribute('visible', 'true');
+      // hide the other poster if it was up
+      thembekaPoster.setAttribute('visible', 'false');
+      playOnly(introAudio);
+    });
+    introMarker.addEventListener('markerLost', () => {
+      introPoster.setAttribute('visible', 'false');
+      try { introAudio.pause(); introAudio.currentTime = 0; } catch(_){}
     });
 
-    marker.addEventListener('markerLost', () => {
-      markerVisible = false;
-      lostTimer = setTimeout(() => {
-        if (!markerVisible) {
-          poster.setAttribute('visible','false');
-          audioEl.pause(); audioEl.currentTime = 0;
-        }
-      }, 500);
+    /* ===== THEMBEKA marker events (HIRO) ===== */
+    thembekaMarker.addEventListener('markerFound', () => {
+      thembekaPoster.setAttribute('visible', 'true');
+      // hide the other poster if it was up
+      introPoster.setAttribute('visible', 'false');
+      playOnly(thembekaAudio);
+    });
+    thembekaMarker.addEventListener('markerLost', () => {
+      thembekaPoster.setAttribute('visible', 'false');
+      try { thembekaAudio.pause(); thembekaAudio.currentTime = 0; } catch(_){}
     });
 
+    /* Manual audio unlock (iOS fallback) */
     unlockBtn.addEventListener('click', () => {
-      audioEl.play().then(()=> unlockBtn.style.display = 'none').catch(()=>{});
+      // Try restarting the last requested audio; here we just unhide button after any play
+      (introAudio.paused ? introAudio : thembekaAudio)
+        .play()
+        .then(()=> unlockBtn.style.display = 'none')
+        .catch(()=>{});
     });
   </script>
 </body>
 </html>
-
-
-
