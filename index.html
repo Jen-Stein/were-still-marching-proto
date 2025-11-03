@@ -9,7 +9,7 @@
   <script src="https://aframe.io/releases/1.2.0/aframe.min.js"></script>
   <script src="https://cdn.jsdelivr.net/gh/AR-js-org/AR.js/aframe/build/aframe-ar.js"></script>
 
-  <!-- GIF shader (for the Thembeka transparent GIF) -->
+  <!-- GIF shader (for transparent GIFs) -->
   <script src="https://unpkg.com/aframe-gif-shader/dist/aframe-gif-shader.min.js"></script>
 
   <style>
@@ -57,7 +57,7 @@
 
   <div id="start">
     <h2>We’re Still Marching — AR Prototype</h2>
-    <p>Tap Start, allow camera, then point at the printed <b>KANJI</b> or <b>HIRO</b> marker.</p>
+    <p>Tap Start, allow camera, then point at the printed <b>KANJI</b>, <b>HIRO</b>, or your <b>CIRCLE</b> marker.</p>
     <button id="startBtn">Start</button>
   </div>
 
@@ -78,6 +78,10 @@
       <!-- THEMBEKA stop assets (HIRO marker) -->
       <img id="thembekaGif" src="assets/thembeka_small.gif" crossorigin="anonymous">
       <audio id="thembekaAudio" src="assets/thembeka_audio.mp3" preload="auto" playsinline webkit-playsinline></audio>
+
+      <!-- NALEDI stop assets (CUSTOM PATTERN marker) -->
+      <img id="nalediGif" src="assets/naledi.gif" crossorigin="anonymous">
+      <audio id="nalediAudio" src="assets/naledi_audio.mp3" preload="auto" playsinline webkit-playsinline></audio>
     </a-assets>
 
     <!-- ====== INTRO STOP: KANJI marker ====== -->
@@ -110,6 +114,22 @@
       <a-entity light="type: directional; intensity: 0.6" position="1 2 1"></a-entity>
     </a-marker>
 
+    <!-- ====== NALEDI STOP: CUSTOM PATTERN marker ====== -->
+    <a-marker id="nalediMarker"
+              type="pattern" url="assets/pattern-circle.patt" emitevents="true"
+              smooth="true" smoothCount="10" smoothTolerance="0.01" smoothThreshold="5">
+
+      <!-- Transparent GIF plane for Naledi -->
+      <a-plane id="nalediPoster"
+               position="0 2 0" rotation="0 0 0"
+               width="6.2" height="7.2"
+               material="shader: gif; src: #nalediGif; transparent: true; alphaTest: 0.01"
+               visible="false"></a-plane>
+
+      <a-entity light="type: ambient; intensity: 1"></a-entity>
+      <a-entity light="type: directional; intensity: 0.6" position="1 2 1"></a-entity>
+    </a-marker>
+
     <a-entity camera></a-entity>
   </a-scene>
 
@@ -128,9 +148,14 @@
     const thembekaPoster = document.getElementById('thembekaPoster');
     const thembekaAudio  = document.getElementById('thembekaAudio');
 
+    // NALEDI stop elements (custom pattern)
+    const nalediMarker = document.getElementById('nalediMarker');
+    const nalediPoster = document.getElementById('nalediPoster');
+    const nalediAudio  = document.getElementById('nalediAudio');
+
     let userPrimed = false;
 
-    /* Sync canvas to camera (kept from your setup) */
+    /* Sync canvas to camera (your setup) */
     function syncCanvasToVideo(){
       const v = document.querySelector('video#arjs-video, video.arjs-video');
       const c = document.querySelector('canvas.a-canvas');
@@ -146,9 +171,18 @@
     window.addEventListener('resize', syncCanvasToVideo);
     window.addEventListener('orientationchange', ()=>setTimeout(syncCanvasToVideo,300));
 
+    /* Helper: hide all posters */
+    function hideAllPosters(){
+      introPoster.setAttribute('visible','false');
+      thembekaPoster.setAttribute('visible','false');
+      nalediPoster.setAttribute('visible','false');
+    }
+
     /* Helper: stop all audio, then play one (prevents overlap) */
     function playOnly(audioEl){
-      [introAudio, thembekaAudio].forEach(a => { try { a.pause(); a.currentTime = 0; } catch(_){} });
+      [introAudio, thembekaAudio, nalediAudio].forEach(a => {
+        try { a.pause(); a.currentTime = 0; } catch(_) {}
+      });
       if (userPrimed) {
         audioEl.play().catch(()=>{ unlockBtn.style.display = 'block'; });
       } else {
@@ -159,9 +193,10 @@
     /* Start */
     startBtn.addEventListener('click', async () => {
       try {
-        // prime both audios so either can play later
-        await introAudio.play(); introAudio.pause(); introAudio.currentTime = 0;
-        await thembekaAudio.play(); thembekaAudio.pause(); thembekaAudio.currentTime = 0;
+        // prime all audios so any stop can play later
+        await introAudio.play();   introAudio.pause();   introAudio.currentTime   = 0;
+        await thembekaAudio.play();thembekaAudio.pause();thembekaAudio.currentTime= 0;
+        await nalediAudio.play();  nalediAudio.pause();  nalediAudio.currentTime  = 0;
       } catch(_) {}
       userPrimed = true;
       startUI.style.display = 'none';
@@ -170,9 +205,8 @@
 
     /* ===== INTRO marker events (KANJI) ===== */
     introMarker.addEventListener('markerFound', () => {
+      hideAllPosters();
       introPoster.setAttribute('visible', 'true');
-      // hide the other poster if it was up
-      thembekaPoster.setAttribute('visible', 'false');
       playOnly(introAudio);
     });
     introMarker.addEventListener('markerLost', () => {
@@ -182,9 +216,8 @@
 
     /* ===== THEMBEKA marker events (HIRO) ===== */
     thembekaMarker.addEventListener('markerFound', () => {
+      hideAllPosters();
       thembekaPoster.setAttribute('visible', 'true');
-      // hide the other poster if it was up
-      introPoster.setAttribute('visible', 'false');
       playOnly(thembekaAudio);
     });
     thembekaMarker.addEventListener('markerLost', () => {
@@ -192,10 +225,22 @@
       try { thembekaAudio.pause(); thembekaAudio.currentTime = 0; } catch(_){}
     });
 
+    /* ===== NALEDI marker events (CUSTOM PATTERN) ===== */
+    nalediMarker.addEventListener('markerFound', () => {
+      hideAllPosters();
+      nalediPoster.setAttribute('visible', 'true');
+      playOnly(nalediAudio);
+    });
+    nalediMarker.addEventListener('markerLost', () => {
+      nalediPoster.setAttribute('visible', 'false');
+      try { nalediAudio.pause(); nalediAudio.currentTime = 0; } catch(_){}
+    });
+
     /* Manual audio unlock (iOS fallback) */
     unlockBtn.addEventListener('click', () => {
-      // Try restarting the last requested audio; here we just unhide button after any play
-      (introAudio.paused ? introAudio : thembekaAudio)
+      // Try to play whichever is relevant; this also hides the button on success
+      (introAudio.paused && thembekaAudio.paused ? nalediAudio :
+        introAudio.paused ? thembekaAudio : introAudio)
         .play()
         .then(()=> unlockBtn.style.display = 'none')
         .catch(()=>{});
@@ -203,7 +248,3 @@
   </script>
 </body>
 </html>
-
-
-
-
