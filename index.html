@@ -17,6 +17,7 @@
       margin:0; padding:0; width:100%; height:100%;
       overflow:hidden; background:#000; font-family:Arial,sans-serif;
     }
+
     /* Camera feed fills screen */
     video#arjs-video, video.arjs-video{
       position:fixed !important;
@@ -26,12 +27,14 @@
       background:#000 !important;
       z-index:0 !important;
     }
+
     a-scene[embedded], .a-canvas, canvas.a-canvas{
       position:fixed !important;
       inset:0; width:100% !important; height:100% !important;
       background:transparent !important;
       z-index:1 !important;
     }
+
     /* Start overlay */
     #start{
       position:fixed; inset:0;
@@ -42,6 +45,7 @@
       margin-top:12px; padding:12px 18px; font-size:16px;
       border-radius:8px; border:0; background:#ff6b6b; color:#fff; cursor:pointer;
     }
+
     #soundUnlock{
       position:fixed; bottom:14px; left:50%; transform:translateX(-50%);
       z-index:3; background:rgba(0,0,0,.7); color:#fff; border:1px solid #fff;
@@ -53,7 +57,7 @@
 
   <div id="start">
     <h2>We’re Still Marching — AR Prototype</h2>
-    <p>Tap Start, allow camera, then point at the printed <b>KANJI</b>, <b>HIRO</b>, <b>CIRCLE</b>, or <b>TRIANGLE</b> marker.</p>
+    <p>Tap Start, allow camera, then point at the printed <b>KANJI</b>, <b>HIRO</b>, <b>CIRCLE</b>, <b>TRIANGLE</b>, or <b>DIAMOND</b> marker.</p>
     <button id="startBtn">Start</button>
   </div>
 
@@ -67,88 +71,78 @@
     loading-screen="enabled:false">
 
     <a-assets timeout="1">
-      <!-- INTRO stop assets (KANJI marker) -->
+      <!-- INTRO stop assets -->
       <img id="introPosterImg" src="assets/intro-poster.png" crossorigin="anonymous">
       <audio id="introAudio" src="assets/intro_audio.mp3" preload="auto" playsinline webkit-playsinline></audio>
 
-      <!-- THEMBEKA stop assets (HIRO marker) -->
+      <!-- THEMBEKA stop assets -->
       <img id="thembekaGif" src="assets/thembeka_small.gif" crossorigin="anonymous">
       <audio id="thembekaAudio" src="assets/thembeka_audio.mp3" preload="auto" playsinline webkit-playsinline></audio>
 
-      <!-- NALEDI stop assets (CUSTOM PATTERN marker) -->
+      <!-- NALEDI stop assets -->
       <img id="nalediGif" src="assets/naledi.gif" crossorigin="anonymous">
       <audio id="nalediAudio" src="assets/naledi_audio.mp3" preload="auto" playsinline webkit-playsinline></audio>
 
-      <!-- LERATO stop assets (CUSTOM PATTERN marker) -->
+      <!-- LERATO stop assets -->
       <img id="leratoGif" src="assets/Lerato.gif" crossorigin="anonymous">
       <audio id="leratoAudio" src="assets/lerato_audio.mp3" preload="auto" playsinline webkit-playsinline></audio>
+
+      <!-- EXIT stop assets -->
+      <img id="exitPosterImg" src="assets/exit-poster.png" crossorigin="anonymous">
+      <audio id="endingAudio" src="assets/ending_audio.mp3" preload="auto" playsinline webkit-playsinline></audio>
     </a-assets>
 
-    <!-- ====== INTRO STOP: KANJI marker ====== -->
-    <a-marker id="introMarker" preset="kanji" emitevents="true"
-              smooth="true" smoothCount="10" smoothTolerance="0.01" smoothThreshold="5">
-
-      <a-image id="introPoster"
-               src="#introPosterImg"
-               position="0 3.5 0" rotation="0 0 0"
-               width="12" height="6"
-               visible="false"></a-image>
-
+    <!-- ===== INTRO (KANJI) ===== -->
+    <a-marker id="introMarker" preset="kanji" emitevents="true">
+      <a-image id="introPoster" src="#introPosterImg" position="0 3.5 0" rotation="0 0 0" width="12" height="6" visible="false"></a-image>
       <a-entity light="type: ambient; intensity: 1"></a-entity>
       <a-entity light="type: directional; intensity: 0.6" position="1 2 1"></a-entity>
     </a-marker>
 
-    <!-- ====== THEMBEKA STOP: HIRO marker ====== -->
-    <a-marker id="thembekaMarker" preset="hiro" emitevents="true"
-              smooth="true" smoothCount="10" smoothTolerance="0.01" smoothThreshold="5">
-
-      <a-plane id="thembekaPoster"
-               position="0 2 0" rotation="0 0 0"
-               width="6.2" height="7.2"
+    <!-- ===== THEMBEKA (HIRO) ===== -->
+    <a-marker id="thembekaMarker" preset="hiro" emitevents="true">
+      <a-plane id="thembekaPoster" position="0 2 0" rotation="0 0 0" width="6.2" height="7.2"
                material="shader: gif; src: #thembekaGif; transparent: true; alphaTest: 0.01"
                visible="false"></a-plane>
-
       <a-entity light="type: ambient; intensity: 1"></a-entity>
       <a-entity light="type: directional; intensity: 0.6" position="1 2 1"></a-entity>
     </a-marker>
 
-    <!-- ====== NALEDI STOP: CIRCLE PATTERN marker (GIF) ====== -->
-    <a-marker id="nalediMarker"
-              type="pattern" url="assets/pattern-circle.patt" emitevents="true"
-              smooth="true" smoothCount="10" smoothTolerance="0.01" smoothThreshold="5">
-
-      <a-plane id="nalediPoster"
-               position="0 2 0" rotation="0 0 0"
-               width="6.2" height="7.2"
+    <!-- ===== NALEDI (CIRCLE pattern) ===== -->
+    <a-marker id="nalediMarker" type="pattern" url="assets/pattern-circle.patt" emitevents="true">
+      <a-plane id="nalediPoster" position="0 2 0" rotation="0 0 0" width="6.2" height="7.2"
                material="shader: gif; src: #nalediGif; transparent: true; alphaTest: 0.01"
                visible="false"></a-plane>
-
       <a-entity light="type: ambient; intensity: 1"></a-entity>
       <a-entity light="type: directional; intensity: 0.6" position="1 2 1"></a-entity>
     </a-marker>
 
-    <!-- ====== LERATO STOP: TRIANGLE PATTERN marker (GIF) ====== -->
-    <a-marker id="leratoMarker"
-              type="pattern" url="assets/pattern-triangle.patt" emitevents="true"
-              smooth="true" smoothCount="10" smoothTolerance="0.01" smoothThreshold="5">
-
-      <a-plane id="leratoPoster"
-               position="0 2 0" rotation="0 0 0"
-               width="6.2" height="7.2"
+    <!-- ===== LERATO (TRIANGLE pattern) ===== -->
+    <a-marker id="leratoMarker" type="pattern" url="assets/pattern-triangle.patt" emitevents="true">
+      <a-plane id="leratoPoster" position="0 2 0" rotation="0 0 0" width="6.2" height="7.2"
                material="shader: gif; src: #leratoGif; transparent: true; alphaTest: 0.01"
                visible="false"></a-plane>
-
       <a-entity light="type: ambient; intensity: 1"></a-entity>
       <a-entity light="type: directional; intensity: 0.6" position="1 2 1"></a-entity>
+    </a-marker>
+
+    <!-- ===== EXIT (DIAMOND pattern) ===== -->
+    <a-marker id="exitMarker" type="pattern" url="assets/pattern-diamond.patt" emitevents="true">
+      <a-image id="exitPoster" src="#exitPosterImg"
+               position="0 4 0" rotation="0 0 0"
+               width="12" height="7"
+               visible="false"></a-image>
+      <a-entity light="type: ambient; intensity: 1"></a-entity>
+      <a-entity light="type: directional; intensity: 0.8" position="1 3 2"></a-entity>
     </a-marker>
 
     <a-entity camera></a-entity>
   </a-scene>
 
   <script>
-    const startUI     = document.getElementById('start');
-    const startBtn    = document.getElementById('startBtn');
-    const unlockBtn   = document.getElementById('soundUnlock');
+    const startUI = document.getElementById('start');
+    const startBtn = document.getElementById('startBtn');
+    const unlockBtn = document.getElementById('soundUnlock');
 
     // INTRO
     const introMarker = document.getElementById('introMarker');
@@ -170,9 +164,14 @@
     const leratoPoster = document.getElementById('leratoPoster');
     const leratoAudio  = document.getElementById('leratoAudio');
 
+    // EXIT
+    const exitMarker = document.getElementById('exitMarker');
+    const exitPoster = document.getElementById('exitPoster');
+    const endingAudio = document.getElementById('endingAudio');
+
     let userPrimed = false;
 
-    /* Sync canvas to camera */
+    /* Sync canvas */
     function syncCanvasToVideo(){
       const v = document.querySelector('video#arjs-video, video.arjs-video');
       const c = document.querySelector('canvas.a-canvas');
@@ -194,80 +193,56 @@
       thembekaPoster.setAttribute('visible','false');
       nalediPoster.setAttribute('visible','false');
       leratoPoster.setAttribute('visible','false');
+      exitPoster.setAttribute('visible','false');
     }
+
     function playOnly(audioEl){
-      [introAudio, thembekaAudio, nalediAudio, leratoAudio].forEach(a => {
-        try { a.pause(); a.currentTime = 0; } catch(_) {}
+      [introAudio, thembekaAudio, nalediAudio, leratoAudio, endingAudio].forEach(a=>{
+        try { a.pause(); a.currentTime=0; } catch(_) {}
       });
-      if (userPrimed) {
-        audioEl.play().catch(()=>{ unlockBtn.style.display = 'block'; });
-      } else {
-        unlockBtn.style.display = 'block';
-      }
+      if (userPrimed) audioEl.play().catch(()=>unlockBtn.style.display='block');
+      else unlockBtn.style.display='block';
     }
 
     /* Start */
-    startBtn.addEventListener('click', async () => {
+    startBtn.addEventListener('click', async()=>{
       try {
-        await introAudio.play();    introAudio.pause();    introAudio.currentTime    = 0;
-        await thembekaAudio.play(); thembekaAudio.pause(); thembekaAudio.currentTime = 0;
-        await nalediAudio.play();   nalediAudio.pause();   nalediAudio.currentTime   = 0;
-        await leratoAudio.play();   leratoAudio.pause();   leratoAudio.currentTime   = 0;
-      } catch(_) {}
+        await introAudio.play(); introAudio.pause(); introAudio.currentTime=0;
+        await thembekaAudio.play(); thembekaAudio.pause(); thembekaAudio.currentTime=0;
+        await nalediAudio.play(); nalediAudio.pause(); nalediAudio.currentTime=0;
+        await leratoAudio.play(); leratoAudio.pause(); leratoAudio.currentTime=0;
+        await endingAudio.play(); endingAudio.pause(); endingAudio.currentTime=0;
+      }catch(_){}
       userPrimed = true;
-      startUI.style.display = 'none';
-      setTimeout(syncCanvasToVideo, 200);
+      startUI.style.display='none';
+      setTimeout(syncCanvasToVideo,200);
     });
 
-    /* Events */
-    introMarker.addEventListener('markerFound', () => {
-      hideAllPosters();
-      introPoster.setAttribute('visible', 'true');
-      playOnly(introAudio);
-    });
-    introMarker.addEventListener('markerLost', () => {
-      introPoster.setAttribute('visible', 'false');
-      try { introAudio.pause(); introAudio.currentTime = 0; } catch(_){}
-    });
+    /* Event listeners for all markers */
+    function setupMarker(marker, poster, audio){
+      marker.addEventListener('markerFound',()=>{
+        hideAllPosters();
+        poster.setAttribute('visible','true');
+        playOnly(audio);
+      });
+      marker.addEventListener('markerLost',()=>{
+        poster.setAttribute('visible','false');
+        try { audio.pause(); audio.currentTime=0; } catch(_){}
+      });
+    }
 
-    thembekaMarker.addEventListener('markerFound', () => {
-      hideAllPosters();
-      thembekaPoster.setAttribute('visible', 'true');
-      playOnly(thembekaAudio);
-    });
-    thembekaMarker.addEventListener('markerLost', () => {
-      thembekaPoster.setAttribute('visible', 'false');
-      try { thembekaAudio.pause(); thembekaAudio.currentTime = 0; } catch(_){}
-    });
+    setupMarker(introMarker,introPoster,introAudio);
+    setupMarker(thembekaMarker,thembekaPoster,thembekaAudio);
+    setupMarker(nalediMarker,nalediPoster,nalediAudio);
+    setupMarker(leratoMarker,leratoPoster,leratoAudio);
+    setupMarker(exitMarker,exitPoster,endingAudio);
 
-    nalediMarker.addEventListener('markerFound', () => {
-      hideAllPosters();
-      nalediPoster.setAttribute('visible', 'true');
-      playOnly(nalediAudio);
-    });
-    nalediMarker.addEventListener('markerLost', () => {
-      nalediPoster.setAttribute('visible', 'false');
-      try { nalediAudio.pause(); nalediAudio.currentTime = 0; } catch(_){}
-    });
-
-    leratoMarker.addEventListener('markerFound', () => {
-      hideAllPosters();
-      leratoPoster.setAttribute('visible', 'true');
-      playOnly(leratoAudio);
-    });
-    leratoMarker.addEventListener('markerLost', () => {
-      leratoPoster.setAttribute('visible', 'false');
-      try { leratoAudio.pause(); leratoAudio.currentTime = 0; } catch(_){}
-    });
-
-    /* iOS manual audio unlock */
-    unlockBtn.addEventListener('click', () => {
-      // try the last relevant one; this will hide the button on success
-      (introAudio.paused && thembekaAudio.paused && nalediAudio.paused ? leratoAudio :
-        introAudio.paused && thembekaAudio.paused ? nalediAudio :
-        introAudio.paused ? thembekaAudio : introAudio)
-        .play()
-        .then(()=> unlockBtn.style.display = 'none')
+    /* iOS unlock */
+    unlockBtn.addEventListener('click',()=>{
+      [introAudio,thembekaAudio,nalediAudio,leratoAudio,endingAudio]
+        .find(a=>a.paused)
+        ?.play()
+        .then(()=>unlockBtn.style.display='none')
         .catch(()=>{});
     });
   </script>
