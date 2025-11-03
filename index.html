@@ -80,8 +80,8 @@
       <audio id="thembekaAudio" src="assets/thembeka_audio.mp3" preload="auto" playsinline webkit-playsinline></audio>
 
       <!-- NALEDI stop assets (CUSTOM PATTERN marker) -->
-      <img id="nalediGif" src="assets/naledi_final.gif" crossorigin="anonymous">
-      <audio id="nalediAudio" src="assets/naledi_audio.mp3" preload="auto" playsinline webkit-playsinline></audio>
+      <img id="nalediSheet" src="assets/naledi_sheet.png" crossorigin="anonymous">
+<audio id="nalediAudio" src="assets/naledi_audio.mp3" preload="auto" playsinline webkit-playsinline></audio>
     </a-assets>
 
     <!-- ====== INTRO STOP: KANJI marker ====== -->
@@ -115,23 +115,62 @@
     </a-marker>
 
     <!-- ====== NALEDI STOP: CUSTOM PATTERN marker ====== -->
-    <a-marker id="nalediMarker"
-              type="pattern" url="assets/pattern-circle.patt" emitevents="true"
-              smooth="true" smoothCount="10" smoothTolerance="0.01" smoothThreshold="5">
+   <a-marker id="nalediMarker"
+          type="pattern" url="assets/pattern-circle.patt" emitevents="true"
+          smooth="true" smoothCount="10" smoothTolerance="0.01" smoothThreshold="5">
 
-      <!-- Transparent GIF plane for Naledi -->
-      <a-plane id="nalediPoster"
-               position="0 2 0" rotation="0 0 0"
-               width="5.2" height="6.2"
-               material="shader: gif; src: #nalediGif; transparent: true; alphaTest: 0.01"
-               visible="false"></a-plane>
+  <a-plane id="nalediPoster"
+           position="0 2 0" rotation="0 0 0"
+           width="6.2" height="7.2"
+           material="src: #nalediSheet; transparent: true; alphaTest: 0.01"
+           sprite-anim="cols: 2; rows: 1; fps: 6"
+           visible="false"></a-plane>
 
-      <a-entity light="type: ambient; intensity: 1"></a-entity>
-      <a-entity light="type: directional; intensity: 0.6" position="1 2 1"></a-entity>
-    </a-marker>
-
-    <a-entity camera></a-entity>
+  <a-entity light="type: ambient; intensity: 1"></a-entity>
+  <a-entity light="type: directional; intensity: 0.6" position="1 2 1"></a-entity>
+</a-marker>
   </a-scene>
+
+
+  <!-- Add this <script> near the bottom (before your other JS or inside it): -->
+<script>
+AFRAME.registerComponent('sprite-anim', {
+  schema: { cols: {default: 2}, rows: {default: 1}, fps: {default: 6} },
+  init() {
+    this.frame = 0;
+    this.acc = 0;
+    const mesh = this.el.getObject3D('mesh');
+    this.mat = mesh && mesh.material;
+    this.map = this.mat && this.mat.map;
+    if (!this.map) return;
+
+    this.map.wrapS = THREE.RepeatWrapping;
+    this.map.wrapT = THREE.RepeatWrapping;
+    this.tileW = 1 / this.data.cols;
+    this.tileH = 1 / this.data.rows;
+    this.map.repeat.set(this.tileW, this.tileH);
+    this._applyFrame();
+  },
+  tick(t, dt) {
+    if (!this.map) return;
+    this.acc += dt;
+    const interval = 1000 / this.data.fps;
+    if (this.acc >= interval) {
+      this.acc -= interval;
+      const total = this.data.cols * this.data.rows;
+      this.frame = (this.frame + 1) % total;
+      this._applyFrame();
+    }
+  },
+  _applyFrame() {
+    const col = this.frame % this.data.cols;
+    const row = Math.floor(this.frame / this.data.cols);
+    // UV origin is lower-left; flip Y math to match typical spritesheets
+    this.map.offset.set(col * this.tileW, 1 - (row + 1) * this.tileH);
+    this.mat.needsUpdate = true;
+  }
+});
+</script>
 
   <script>
     const startUI     = document.getElementById('start');
@@ -248,6 +287,7 @@
   </script>
 </body>
 </html>
+
 
 
 
