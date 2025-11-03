@@ -119,11 +119,12 @@
               type="pattern" url="assets/pattern-circle.patt" emitevents="true"
               smooth="true" smoothCount="10" smoothTolerance="0.01" smoothThreshold="5">
 
-      <a-plane id="nalediPoster"
-               position="0 2 0" rotation="0 0 0"
-               width="6.2" height="7.2"
-               material="shader: gif; src: #nalediGif; transparent: true; alphaTest: 0.01"
-               visible="false"></a-plane>
+     <a-plane id="nalediPoster"
+         position="0 2 0" rotation="0 0 0"
+         width="6.2" height="7.2"
+         material="shader: gif; src: #nalediGif; transparent: true; alphaTest: 0.5; depthWrite: false"
+         visible="false"></a-plane>
+      
 
       <a-entity light="type: ambient; intensity: 1"></a-entity>
       <a-entity light="type: directional; intensity: 0.6" position="1 2 1"></a-entity>
@@ -247,3 +248,4 @@
   </script>
 </body>
 </html>
+
