@@ -82,8 +82,11 @@
 
     <button id="soundUnlock">Tap to enable sound</button>
 
-    <a-scene embedded vr-mode-ui="enabled:false" renderer="alpha:true; antialias:true"
-        arjs="sourceType: webcam; debugUIEnabled:false" loading-screen="enabled:false">
+   <a-scene embedded vr-mode-ui="enabled:false" 
+    arjs="sourceType: webcam; debugUIEnabled:false; detectionMode: mono_and_matrix;" 
+    renderer="alpha:true" 
+    loading-screen="enabled:false">
+    
 
         <a-assets timeout="1">
             <img id="introPosterImg" src="assets/intro-poster.png" crossorigin="anonymous">
@@ -238,3 +241,4 @@
 </body>
 
 </html>
+
