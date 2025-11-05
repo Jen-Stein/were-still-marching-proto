@@ -12,7 +12,7 @@
     <script src="https://unpkg.com/aframe-gif-shader/dist/aframe-gif-shader.min.js"></script>
 
     <style>
-        /* Screen Sizing Fix: Minimalist CSS for full-screen camera */
+        /* SIZING FIX: Minimalist CSS for reliable fullscreen camera */
         html,
         body {
             height: 100%;
@@ -28,7 +28,7 @@
             height: 100%;
         }
 
-        /* Start overlay (kept your original styling) */
+        /* Start overlay */
         #start {
             position: fixed;
             inset: 0;
@@ -83,7 +83,7 @@
     <button id="soundUnlock">Tap to enable sound</button>
 
     <a-scene embedded vr-mode-ui="enabled:false" renderer="alpha:true; antialias:true"
-        arjs="sourceType: webcam; debugUIEnabled:false" loading-screen="enabled:false">
+        arjs="sourceType: webcam; debugUIEnabled:false; sourceWidth:1280; sourceHeight:720;" loading-screen="enabled:false">
 
         <a-assets timeout="1">
             <img id="introPosterImg" src="assets/intro-poster.png" crossorigin="anonymous">
@@ -103,7 +103,7 @@
         </a-assets>
 
         <a-marker id="introMarker" preset="kanji" emitevents="true">
-            <a-image id="introPoster" src="#introPosterImg" position="0 2 0" rotation="0 0 0" width="3.2" height="1.06"
+            <a-image id="introPoster" src="#introPosterImg" position="0 2 0" rotation="0 0 0" width="4" height="1.33"
                 visible="false"></a-image>
             <a-entity light="type: ambient; intensity: 1"></a-entity>
             <a-entity light="type: directional; intensity: 0.6" position="1 2 1"></a-entity>
@@ -111,7 +111,7 @@
         </a-marker>
 
         <a-marker id="thembekaMarker" preset="hiro" emitevents="true">
-            <a-plane id="thembekaPoster" position="0 2 0" rotation="0 0 0" width="3.2" height="4.2"
+            <a-plane id="thembekaPoster" position="0 2.1 0" rotation="0 0 0" width="3.2" height="4.2"
                 material="shader: gif; src: #thembekaGif; transparent: true; alphaTest: 0.01" visible="false"></a-plane>
             <a-entity light="type: ambient; intensity: 1"></a-entity>
             <a-entity light="type: directional; intensity: 0.6" position="1 2 1"></a-entity>
@@ -119,7 +119,7 @@
         </a-marker>
 
         <a-marker id="nalediMarker" type="pattern" url="assets/pattern-circle.patt" emitevents="true">
-            <a-plane id="nalediPoster" position="0 2 0" rotation="0 0 0" width="3.2" height="4.2"
+            <a-plane id="nalediPoster" position="0 2.1 0" rotation="0 0 0" width="3.2" height="4.2"
                 material="shader: gif; src: #nalediGif; transparent: true; alphaTest: 0.6; depthWrite: false"
                 visible="false"></a-plane>
             <a-entity light="type: ambient; intensity: 1"></a-entity>
@@ -128,7 +128,7 @@
         </a-marker>
 
         <a-marker id="leratoMarker" type="pattern" url="assets/pattern-triangle.patt" emitevents="true">
-            <a-plane id="leratoPoster" position="0 2 0" rotation="0 0 0" width="3.2" height="4.2"
+            <a-plane id="leratoPoster" position="0 2.1 0" rotation="0 0 0" width="3.2" height="4.2"
                 material="shader: gif; src: #leratoGif; transparent: true; alphaTest: 0.01" visible="false"></a-plane>
             <a-entity light="type: ambient; intensity: 1"></a-entity>
             <a-entity light="type: directional; intensity: 0.6" position="1 2 1"></a-entity>
@@ -136,7 +136,7 @@
         </a-marker>
 
         <a-marker id="exitMarker" type="pattern" url="assets/pattern-T_marker.patt" emitevents="true">
-            <a-image id="exitPoster" src="#exitPosterImg" position="0 2 0" rotation="0 0 0" width="3.2" height="1.06"
+            <a-image id="exitPoster" src="#exitPosterImg" position="0 2 0" rotation="0 0 0" width="4" height="1.33"
                 visible="false"></a-image>
             <a-entity light="type: ambient; intensity: 1"></a-entity>
             <a-entity light="type: directional; intensity: 0.8" position="1 3 2"></a-entity>
@@ -175,31 +175,34 @@
 
         /* Helper to stop all A-Frame sounds, then play the target sound */
         function playOnly(targetSoundComp) {
+            // Stop all sounds first
             allSoundComps.forEach(s => {
                 if (s.isPlaying) {
                     s.stopSound();
                 }
             });
+
             // Try to play the new sound
             try {
                 if (userPrimed) {
+                    // This attempt will fail without user interaction if not primed, but it's the right A-Frame call
                     targetSoundComp.playSound();
-                    unlockBtn.style.display = 'none'; // Hide if successfully played
+                    unlockBtn.style.display = 'none';
                 } else {
                     // If not primed, user needs to interact
                     unlockBtn.style.display = 'block';
                 }
             } catch (e) {
                 console.error("Error playing sound component:", e);
-                // Fallback display unlock button if A-Frame playSound fails
+                // Fallback: display unlock button if A-Frame playSound fails
                 unlockBtn.style.display = 'block';
             }
         }
 
         /* Start Button */
         startBtn.addEventListener('click', () => {
-            // Attempt to prime all original HTML5 audio elements to unlock playback permission
-            // This is a common mobile/iOS requirement for A-Frame's sound component too
+            // Important: Attempt to play/pause the actual HTML5 audio tags to satisfy
+            // mobile browser requirements for user-initiated media playback.
             markersData.forEach(m => {
                 try { m.audioEl.play(); m.audioEl.pause(); m.audioEl.currentTime = 0; } catch (_) { }
             });
@@ -212,11 +215,11 @@
         markersData.forEach(m => {
             m.markerEl.addEventListener('markerFound', () => {
                 hideAllPosters();
+                // Ensure the gif-shader has a frame to display immediately on visible=true
                 m.posterEl.setAttribute('visible', 'true');
                 playOnly(m.soundComp);
             });
 
-            // Keep your original logic: stop sound and hide GIF when marker is lost
             m.markerEl.addEventListener('markerLost', () => {
                 m.posterEl.setAttribute('visible', 'false');
                 if (m.soundComp.isPlaying) {
@@ -225,9 +228,9 @@
             });
         });
 
-        /* iOS/Mobile Unlock (using the general HTML5 Audio click handler as a fallback) */
+        /* iOS/Mobile Unlock */
         unlockBtn.addEventListener('click', () => {
-            // Attempt to trigger playback on any stopped sound component
+            // Attempt to trigger playback on any stopped A-Frame sound component
             const stoppedSound = allSoundComps.find(s => !s.isPlaying);
             if (stoppedSound) {
                 stoppedSound.playSound();
