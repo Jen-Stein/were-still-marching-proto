@@ -111,7 +111,7 @@
 
     <button id="soundUnlock">Tap to enable sound</button>
 
-    <a-scene embedded vr-mode-ui="enabled:false" renderer="alpha:true; antialias:true"
+    <a-scene id="arScene" embedded vr-mode-ui="enabled:false" renderer="alpha:true; antialias:true"
         arjs="sourceType: webcam; debugUIEnabled:false" loading-screen="enabled:false">
 
         <a-assets timeout="1">
@@ -176,29 +176,44 @@
     </a-scene>
 
     <script>
+        const arScene = document.getElementById('arScene');
         const startUI = document.getElementById('start');
         const startBtn = document.getElementById('startBtn');
         const unlockBtn = document.getElementById('soundUnlock');
 
-        // Map all elements and retrieve the A-Frame Sound Component
-        const markersData = [
+        let markersData = [];
+        let allSoundComps = [];
+        let userPrimed = false;
+
+        // --- Core Data Definitions ---
+        const MARKER_CONFIG = [
             { marker: 'introMarker', poster: 'introPoster', audioAsset: 'introAudio', soundComponent: 'introSoundComponent' },
             { marker: 'thembekaMarker', poster: 'thembekaPoster', audioAsset: 'thembekaAudio', soundComponent: 'thembekaSoundComponent' },
             { marker: 'nalediMarker', poster: 'nalediPoster', audioAsset: 'nalediAudio', soundComponent: 'nalediSoundComponent' },
             { marker: 'leratoMarker', poster: 'leratoPoster', audioAsset: 'leratoAudio', soundComponent: 'leratoSoundComponent' },
             { marker: 'exitMarker', poster: 'exitPoster', audioAsset: 'endingAudio', soundComponent: 'endingSoundComponent' },
-        ].map(data => ({
-            markerEl: document.getElementById(data.marker),
-            posterEl: document.getElementById(data.poster),
-            audioEl: document.getElementById(data.audioAsset), // Original HTML5 Audio tag for priming
-            // 🔈 Retrieve the A-Frame Sound component object
-            soundComp: document.getElementById(data.soundComponent).components.sound
-        }));
+        ];
 
-        const allSoundComps = markersData.map(m => m.soundComp);
-        let userPrimed = false;
+        // --- A-Frame Initialization Logic ---
+        arScene.addEventListener('loaded', () => {
+            // 🌟 CRITICAL FIX: Retrieve the A-Frame sound components ONLY after the scene is loaded.
+            markersData = MARKER_CONFIG.map(data => ({
+                markerEl: document.getElementById(data.marker),
+                posterEl: document.getElementById(data.poster),
+                audioEl: document.getElementById(data.audioAsset), // Raw HTML Audio for priming
+                // Retrieve the A-Frame Sound component object
+                soundComp: document.getElementById(data.soundComponent)?.components?.sound
+            })).filter(data => data.soundComp); // Filter out any that failed to retrieve
 
-        /* Canvas Sync (Keep this for reliable sizing on iOS/mobile) */
+            allSoundComps = markersData.map(m => m.soundComp);
+            
+            // Set up marker event listeners after components are mapped
+            markersData.forEach(setupMarker);
+        });
+        
+        // --- Utility Functions ---
+
+        /* Canvas Sync (Kept for reliable sizing on iOS/mobile) */
         function syncCanvasToVideo() {
             const v = document.querySelector('video#arjs-video, video.arjs-video');
             const c = document.querySelector('canvas.a-canvas');
@@ -219,7 +234,7 @@
             markersData.forEach(m => m.posterEl.setAttribute('visible', 'false'));
         }
 
-        /* 🔈 FIX: Use A-Frame sound methods (.playSound(), .stopSound()) */
+        /* FIX: Use A-Frame sound methods (.playSound(), .stopSound()) */
         function playOnly(targetSoundComp) {
             // Stop all sounds first
             allSoundComps.forEach(s => {
@@ -241,9 +256,11 @@
             }
         }
 
+        /* --- Event Handlers --- */
+
         /* Start Button - CRITICAL for iOS Media Unlock */
         startBtn.addEventListener('click', async () => {
-            // Try to prime the raw HTML5 audio elements to unlock playback permission
+            // 🌟 CRITICAL FIX: Prime the raw HTML5 audio elements to unlock playback permission
             markersData.forEach(m => {
                 try { m.audioEl.play(); m.audioEl.pause(); m.audioEl.currentTime = 0; } catch (_) { }
             });
@@ -268,8 +285,6 @@
                 }
             });
         }
-
-        markersData.forEach(setupMarker);
 
         /* iOS unlock (Tap to enable sound) */
         unlockBtn.addEventListener('click', () => {
