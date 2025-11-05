@@ -4,7 +4,7 @@
 <head>
     <meta charset="utf-8" />
     <title>We’re Still Marching — AR Experience</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
 
     <script src="https://aframe.io/releases/1.2.0/aframe.min.js"></script>
     <script src="https://cdn.jsdelivr.net/gh/AR-js-org/AR.js/aframe/build/aframe-ar.js"></script>
@@ -12,37 +12,20 @@
     <script src="https://unpkg.com/aframe-gif-shader/dist/aframe-gif-shader.min.js"></script>
 
     <style>
+        /* Screen Sizing Fix: Minimalist CSS for full-screen camera */
         html,
         body {
+            height: 100%;
             margin: 0;
-            padding: 0;
+            overflow: hidden;
+            font-family: Arial, sans-serif;
+            background: #000;
+        }
+
+        /* AR.js/A-Frame elements take up the whole screen without complex positioning */
+        a-scene {
             width: 100%;
             height: 100%;
-            overflow: hidden;
-            background: #000;
-            font-family: Arial, sans-serif;
-        }
-
-        /* 🌟 iOS BLACK SCREEN FIX 🌟 */
-        /* Force the video element to cover the screen (CRITICAL for iOS Safari) */
-        video#arjs-video,
-video.arjs-video {
-    /* ... other styles ... */
-    width: 100% !important;
-    height: 100% !important;
-    object-fit: cover !important; /* Forces the video to cover the screen */
-    /* ... other styles ... */
-}
-        }
-
-        /* Canvas overlay */
-        a-scene {
-            position: absolute !important;
-            top: 0 !important;
-            left: 0 !important;
-            width: 100% !important;
-            height: 100% !important;
-            z-index: 1 !important;
         }
 
         /* Start overlay (kept your original styling) */
@@ -100,8 +83,7 @@ video.arjs-video {
     <button id="soundUnlock">Tap to enable sound</button>
 
     <a-scene embedded vr-mode-ui="enabled:false" renderer="alpha:true; antialias:true"
-    arjs="sourceType: webcam; debugUIEnabled:false; sourceWidth:640; sourceHeight:480; display: look-at; aspectRatio: 1.3333;" 
-    loading-screen="enabled:false">
+        arjs="sourceType: webcam; debugUIEnabled:false" loading-screen="enabled:false">
 
         <a-assets timeout="1">
             <img id="introPosterImg" src="assets/intro-poster.png" crossorigin="anonymous">
@@ -121,7 +103,7 @@ video.arjs-video {
         </a-assets>
 
         <a-marker id="introMarker" preset="kanji" emitevents="true">
-            <a-image id="introPoster" src="#introPosterImg" position="0 2 0" rotation="0 0 0" width="4" height="1.33"
+            <a-image id="introPoster" src="#introPosterImg" position="0 2 0" rotation="0 0 0" width="3.2" height="1.06"
                 visible="false"></a-image>
             <a-entity light="type: ambient; intensity: 1"></a-entity>
             <a-entity light="type: directional; intensity: 0.6" position="1 2 1"></a-entity>
@@ -129,7 +111,7 @@ video.arjs-video {
         </a-marker>
 
         <a-marker id="thembekaMarker" preset="hiro" emitevents="true">
-            <a-plane id="thembekaPoster" position="0 2.1 0" rotation="0 0 0" width="3.2" height="4.2"
+            <a-plane id="thembekaPoster" position="0 2 0" rotation="0 0 0" width="3.2" height="4.2"
                 material="shader: gif; src: #thembekaGif; transparent: true; alphaTest: 0.01" visible="false"></a-plane>
             <a-entity light="type: ambient; intensity: 1"></a-entity>
             <a-entity light="type: directional; intensity: 0.6" position="1 2 1"></a-entity>
@@ -137,7 +119,7 @@ video.arjs-video {
         </a-marker>
 
         <a-marker id="nalediMarker" type="pattern" url="assets/pattern-circle.patt" emitevents="true">
-            <a-plane id="nalediPoster" position="0 2.1 0" rotation="0 0 0" width="3.2" height="4.2"
+            <a-plane id="nalediPoster" position="0 2 0" rotation="0 0 0" width="3.2" height="4.2"
                 material="shader: gif; src: #nalediGif; transparent: true; alphaTest: 0.01; depthWrite: false"
                 visible="false"></a-plane>
             <a-entity light="type: ambient; intensity: 1"></a-entity>
@@ -146,7 +128,7 @@ video.arjs-video {
         </a-marker>
 
         <a-marker id="leratoMarker" type="pattern" url="assets/pattern-triangle.patt" emitevents="true">
-            <a-plane id="leratoPoster" position="0 2.1 0" rotation="0 0 0" width="3.2" height="4.2"
+            <a-plane id="leratoPoster" position="0 2 0" rotation="0 0 0" width="3.2" height="4.2"
                 material="shader: gif; src: #leratoGif; transparent: true; alphaTest: 0.01" visible="false"></a-plane>
             <a-entity light="type: ambient; intensity: 1"></a-entity>
             <a-entity light="type: directional; intensity: 0.6" position="1 2 1"></a-entity>
@@ -154,7 +136,7 @@ video.arjs-video {
         </a-marker>
 
         <a-marker id="exitMarker" type="pattern" url="assets/pattern-T_marker.patt" emitevents="true">
-            <a-image id="exitPoster" src="#exitPosterImg" position="0 2 0" rotation="0 0 0" width="4" height="1.33"
+            <a-image id="exitPoster" src="#exitPosterImg" position="0 2 0" rotation="0 0 0" width="3.2" height="1.06"
                 visible="false"></a-image>
             <a-entity light="type: ambient; intensity: 1"></a-entity>
             <a-entity light="type: directional; intensity: 0.8" position="1 3 2"></a-entity>
@@ -179,8 +161,8 @@ video.arjs-video {
         ].map(data => ({
             markerEl: document.getElementById(data.marker),
             posterEl: document.getElementById(data.poster),
-            audioEl: document.getElementById(data.audioAsset),
-            soundComp: document.getElementById(data.soundComponent).components.sound
+            audioEl: document.getElementById(data.audioAsset), // Original HTML5 Audio tag
+            soundComp: document.getElementById(data.soundComponent).components.sound // A-Frame Sound component
         }));
 
         const allSoundComps = markersData.map(m => m.soundComp);
@@ -199,22 +181,24 @@ video.arjs-video {
                 }
             });
 
+            // Try to play the new sound
             try {
                 if (userPrimed) {
                     targetSoundComp.playSound();
-                    unlockBtn.style.display = 'none';
+                    unlockBtn.style.display = 'none'; // Hide if successfully played
                 } else {
                     unlockBtn.style.display = 'block';
                 }
             } catch (e) {
                 console.error("Error playing sound component:", e);
+                // Fallback display unlock button if A-Frame playSound fails
                 unlockBtn.style.display = 'block';
             }
         }
 
         /* Start Button - CRITICAL for iOS Media Unlock */
         startBtn.addEventListener('click', () => {
-            // Attempt to play/pause HTML5 audio elements to satisfy iOS media requirements
+            // Attempt to prime all original HTML5 audio elements to unlock playback permission
             markersData.forEach(m => {
                 try { m.audioEl.play(); m.audioEl.pause(); m.audioEl.currentTime = 0; } catch (_) { }
             });
@@ -227,10 +211,12 @@ video.arjs-video {
         markersData.forEach(m => {
             m.markerEl.addEventListener('markerFound', () => {
                 hideAllPosters();
+                // Ensure the gif-shader has a frame to display immediately on visible=true
                 m.posterEl.setAttribute('visible', 'true');
                 playOnly(m.soundComp);
             });
 
+            // Keep your original logic: stop sound and hide GIF when marker is lost
             m.markerEl.addEventListener('markerLost', () => {
                 m.posterEl.setAttribute('visible', 'false');
                 if (m.soundComp.isPlaying) {
@@ -241,6 +227,7 @@ video.arjs-video {
 
         /* iOS/Mobile Unlock */
         unlockBtn.addEventListener('click', () => {
+            // Attempt to trigger playback on any stopped sound component
             const stoppedSound = allSoundComps.find(s => !s.isPlaying);
             if (stoppedSound) {
                 stoppedSound.playSound();
@@ -251,4 +238,3 @@ video.arjs-video {
 </body>
 
 </html>
-
