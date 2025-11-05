@@ -4,7 +4,7 @@
 <head>
     <meta charset="utf-8" />
     <title>We’re Still Marching — AR Experience</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
 
     <script src="https://aframe.io/releases/1.2.0/aframe.min.js"></script>
     <script src="https://cdn.jsdelivr.net/gh/AR-js-org/AR.js/aframe/build/aframe-ar.js"></script>
@@ -12,43 +12,23 @@
     <script src="https://unpkg.com/aframe-gif-shader/dist/aframe-gif-shader.min.js"></script>
 
     <style>
-        /* --- General Layout & Fullscreen Fixes (From the previous suggested fix) --- */
+        /* Screen Sizing Fix: Minimalist CSS for full-screen camera */
         html,
         body {
+            height: 100%;
             margin: 0;
-            padding: 0;
+            overflow: hidden;
+            font-family: Arial, sans-serif;
+            background: #000;
+        }
+
+        /* AR.js/A-Frame elements take up the whole screen without complex positioning */
+        a-scene {
             width: 100%;
             height: 100%;
-            overflow: hidden;
-            background: #000;
-            font-family: Arial, sans-serif;
-            /* Changed position: fixed to position: absolute for better mobile compatibility */
-            position: absolute; 
         }
 
-        /* Essential for AR.js fullscreen performance */
-        video#arjs-video,
-        video.arjs-video {
-            position: absolute !important;
-            top: 0 !important;
-            left: 0 !important;
-            width: 100% !important;
-            height: 100% !important;
-            object-fit: cover !important; /* Ensures video covers screen without stretching */
-            background: #000 !important;
-            z-index: 0 !important;
-        }
-
-        a-scene {
-            position: absolute !important;
-            top: 0 !important;
-            left: 0 !important;
-            width: 100% !important;
-            height: 100% !important;
-            z-index: 1 !important;
-        }
-
-        /* UI elements */
+        /* Start overlay (kept your original styling) */
         #start {
             position: fixed;
             inset: 0;
@@ -95,7 +75,7 @@
 
     <div id="start">
         <h2>We’re Still Marching — AR Prototype</h2>
-        <p>Tap **Start**, allow camera, then point at the printed **KANJI**, **HIRO**, **CIRCLE**, **TRIANGLE**, or
+        <p>Tap Start, allow camera, then point at the printed **KANJI**, **HIRO**, **CIRCLE**, **TRIANGLE**, or
             **T** marker.</p>
         <button id="startBtn">Start</button>
     </div>
@@ -103,9 +83,9 @@
     <button id="soundUnlock">Tap to enable sound</button>
 
     <a-scene embedded vr-mode-ui="enabled:false" renderer="alpha:true; antialias:true"
-        arjs="sourceType: webcam; debugUIEnabled:false; sourceWidth:1280; sourceHeight:960;" loading-screen="enabled:false">
+        arjs="sourceType: webcam; debugUIEnabled:false" loading-screen="enabled:false">
 
-        <a-assets timeout="3000">
+        <a-assets timeout="1">
             <img id="introPosterImg" src="assets/intro-poster.png" crossorigin="anonymous">
             <audio id="introAudio" src="assets/intro_audio.mp3" preload="auto" playsinline webkit-playsinline></audio>
 
@@ -122,43 +102,47 @@
             <audio id="endingAudio" src="assets/ending_audio.mp3" preload="auto" playsinline webkit-playsinline></audio>
         </a-assets>
 
-        <a-marker id="introMarker" preset="kanji" emitevents="true" sound="src: #introAudio; autoplay: false; volume: 1;"></a-marker>
-        <a-entity id="introPosterContainer">
-            <a-image id="introPoster" src="#introPosterImg" position="0 3.5 0" rotation="0 0 0" width="12" height="4"
+        <a-marker id="introMarker" preset="kanji" emitevents="true">
+            <a-image id="introPoster" src="#introPosterImg" position="0 2 0" rotation="0 0 0" width="3.2" height="1.06"
                 visible="false"></a-image>
             <a-entity light="type: ambient; intensity: 1"></a-entity>
-        </a-entity>
-        
+            <a-entity light="type: directional; intensity: 0.6" position="1 2 1"></a-entity>
+            <a-sound id="introSoundComponent" src="#introAudio" positional="false" volume="1" sound="loop: false;"></a-sound>
+        </a-marker>
 
-        <a-marker id="thembekaMarker" preset="hiro" emitevents="true" sound="src: #thembekaAudio; autoplay: false; volume: 1;"></a-marker>
-        <a-entity id="thembekaPosterContainer">
-            <a-plane id="thembekaPoster" position="0 2 0" rotation="0 0 0" width="6.2" height="7.2"
+        <a-marker id="thembekaMarker" preset="hiro" emitevents="true">
+            <a-plane id="thembekaPoster" position="0 2 0" rotation="0 0 0" width="3.2" height="4.2"
                 material="shader: gif; src: #thembekaGif; transparent: true; alphaTest: 0.01" visible="false"></a-plane>
             <a-entity light="type: ambient; intensity: 1"></a-entity>
-        </a-entity>
+            <a-entity light="type: directional; intensity: 0.6" position="1 2 1"></a-entity>
+            <a-sound id="thembekaSoundComponent" src="#thembekaAudio" positional="false" volume="1" sound="loop: false;"></a-sound>
+        </a-marker>
 
-        <a-marker id="nalediMarker" type="pattern" url="assets/pattern-circle.patt" emitevents="true" sound="src: #nalediAudio; autoplay: false; volume: 1;"></a-marker>
-        <a-entity id="nalediPosterContainer">
-            <a-plane id="nalediPoster" position="0 2 0" rotation="0 0 0" width="6.2" height="7.2"
+        <a-marker id="nalediMarker" type="pattern" url="assets/pattern-circle.patt" emitevents="true">
+            <a-plane id="nalediPoster" position="0 2 0" rotation="0 0 0" width="3.2" height="4.2"
                 material="shader: gif; src: #nalediGif; transparent: true; alphaTest: 0.6; depthWrite: false"
                 visible="false"></a-plane>
             <a-entity light="type: ambient; intensity: 1"></a-entity>
-        </a-entity>
+            <a-entity light="type: directional; intensity: 0.6" position="1 2 1"></a-entity>
+            <a-sound id="nalediSoundComponent" src="#nalediAudio" positional="false" volume="1" sound="loop: false;"></a-sound>
+        </a-marker>
 
-        <a-marker id="leratoMarker" type="pattern" url="assets/pattern-triangle.patt" emitevents="true" sound="src: #leratoAudio; autoplay: false; volume: 1;"></a-marker>
-        <a-entity id="leratoPosterContainer">
-            <a-plane id="leratoPoster" position="0 2 0" rotation="0 0 0" width="6.2" height="7.2"
+        <a-marker id="leratoMarker" type="pattern" url="assets/pattern-triangle.patt" emitevents="true">
+            <a-plane id="leratoPoster" position="0 2 0" rotation="0 0 0" width="3.2" height="4.2"
                 material="shader: gif; src: #leratoGif; transparent: true; alphaTest: 0.01" visible="false"></a-plane>
             <a-entity light="type: ambient; intensity: 1"></a-entity>
-        </a-entity>
+            <a-entity light="type: directional; intensity: 0.6" position="1 2 1"></a-entity>
+            <a-sound id="leratoSoundComponent" src="#leratoAudio" positional="false" volume="1" sound="loop: false;"></a-sound>
+        </a-marker>
 
-        <a-marker id="exitMarker" type="pattern" url="assets/pattern-T_marker.patt" emitevents="true" sound="src: #endingAudio; autoplay: false; volume: 1;"></a-marker>
-        <a-entity id="exitPosterContainer">
-            <a-image id="exitPoster" src="#exitPosterImg" position="0 4 0" rotation="0 0 0" width="12" height="4"
+        <a-marker id="exitMarker" type="pattern" url="assets/pattern-T_marker.patt" emitevents="true">
+            <a-image id="exitPoster" src="#exitPosterImg" position="0 2 0" rotation="0 0 0" width="3.2" height="1.06"
                 visible="false"></a-image>
             <a-entity light="type: ambient; intensity: 1"></a-entity>
-        </a-entity>
-        
+            <a-entity light="type: directional; intensity: 0.8" position="1 3 2"></a-entity>
+            <a-sound id="exitSoundComponent" src="#endingAudio" positional="false" volume="1" sound="loop: false;"></a-sound>
+        </a-marker>
+
         <a-entity camera></a-entity>
     </a-scene>
 
@@ -167,89 +151,86 @@
         const startBtn = document.getElementById('startBtn');
         const unlockBtn = document.getElementById('soundUnlock');
 
-        // Combined asset structure for clean management
-        const assets = [
-            { id: 'intro', markerEl: document.getElementById('introMarker'), posterEl: document.getElementById('introPoster') },
-            { id: 'thembeka', markerEl: document.getElementById('thembekaMarker'), posterEl: document.getElementById('thembekaPoster') },
-            { id: 'naledi', markerEl: document.getElementById('nalediMarker'), posterEl: document.getElementById('nalediPoster') },
-            { id: 'lerato', markerEl: document.getElementById('leratoMarker'), posterEl: document.getElementById('leratoPoster') },
-            { id: 'exit', markerEl: document.getElementById('exitMarker'), posterEl: document.getElementById('exitPoster') },
-        ];
+        // Helper structure mapping your elements and their sound components
+        const markersData = [
+            { marker: 'introMarker', poster: 'introPoster', audioAsset: 'introAudio', soundComponent: 'introSoundComponent' },
+            { marker: 'thembekaMarker', poster: 'thembekaPoster', audioAsset: 'thembekaAudio', soundComponent: 'thembekaSoundComponent' },
+            { marker: 'nalediMarker', poster: 'nalediPoster', audioAsset: 'nalediAudio', soundComponent: 'nalediSoundComponent' },
+            { marker: 'leratoMarker', poster: 'leratoPoster', audioAsset: 'leratoAudio', soundComponent: 'leratoSoundComponent' },
+            { marker: 'exitMarker', poster: 'exitPoster', audioAsset: 'endingAudio', soundComponent: 'exitSoundComponent' },
+        ].map(data => ({
+            markerEl: document.getElementById(data.marker),
+            posterEl: document.getElementById(data.poster),
+            audioEl: document.getElementById(data.audioAsset), // Original HTML5 Audio tag
+            soundComp: document.getElementById(data.soundComponent).components.sound // A-Frame Sound component
+        }));
 
+        const allSoundComps = markersData.map(m => m.soundComp);
         let userPrimed = false;
-        let currentSoundComponent = null;
 
-        /* START/Audio Unlock Logic (Simplified) */
+        /* Helper to hide all GIFs/Images */
+        function hideAllPosters() {
+            markersData.forEach(m => m.posterEl.setAttribute('visible', 'false'));
+        }
+
+        /* Helper to stop all A-Frame sounds, then play the target sound */
+        function playOnly(targetSoundComp) {
+            allSoundComps.forEach(s => {
+                if (s.isPlaying) {
+                    s.stopSound();
+                }
+            });
+            // Try to play the new sound
+            try {
+                if (userPrimed) {
+                    targetSoundComp.playSound();
+                    unlockBtn.style.display = 'none'; // Hide if successfully played
+                } else {
+                    // If not primed, user needs to interact
+                    unlockBtn.style.display = 'block';
+                }
+            } catch (e) {
+                console.error("Error playing sound component:", e);
+                // Fallback display unlock button if A-Frame playSound fails
+                unlockBtn.style.display = 'block';
+            }
+        }
+
+        /* Start Button */
         startBtn.addEventListener('click', () => {
-            userPrimed = true; 
+            // Attempt to prime all original HTML5 audio elements to unlock playback permission
+            // This is a common mobile/iOS requirement for A-Frame's sound component too
+            markersData.forEach(m => {
+                try { m.audioEl.play(); m.audioEl.pause(); m.audioEl.currentTime = 0; } catch (_) { }
+            });
+
+            userPrimed = true;
             startUI.style.display = 'none';
         });
 
-        /* --- Core Marker/Audio/Visibility Logic (Inspired by your friend's code) --- */
-
-        // Helper to stop all playing sounds
-        function stopAllSounds() {
-            assets.forEach(asset => {
-                const soundComp = asset.markerEl.components.sound;
-                if (soundComp && soundComp.isPlaying) {
-                    soundComp.stopSound();
-                }
-            });
-            currentSoundComponent = null;
-        }
-        
-        // Helper to hide all posters
-        function hideAllPosters() {
-            assets.forEach(asset => {
-                asset.posterEl.setAttribute('visible', 'false');
-            });
-        }
-        
-
-        // Set up event listeners for each marker
-        assets.forEach(asset => {
-            const marker = asset.markerEl;
-            const poster = asset.posterEl;
-            
-            // Marker Found: Show GIF, Stop previous audio, Start new audio
-            marker.addEventListener('markerFound', () => {
+        /* Event listeners for all markers */
+        markersData.forEach(m => {
+            m.markerEl.addEventListener('markerFound', () => {
                 hideAllPosters();
-                poster.setAttribute('visible', 'true');
-                
-                const soundComp = marker.components.sound;
-                
-                if (soundComp && soundComp !== currentSoundComponent) {
-                    stopAllSounds(); // Stop all existing sounds
-                    
-                    if (userPrimed) {
-                        // Attempt to play sound, show unlock button if blocked (mobile browser policy)
-                        soundComp.playSound();
-                        currentSoundComponent = soundComp;
-                        unlockBtn.style.display = 'none';
-                    } else {
-                        // User needs to tap to prime the audio
-                        unlockBtn.style.display = 'block';
-                    }
-                }
+                m.posterEl.setAttribute('visible', 'true');
+                playOnly(m.soundComp);
             });
 
-            // Marker Lost: Hide GIF, Audio continues until a new marker is found
-            marker.addEventListener('markerLost', () => {
-                poster.setAttribute('visible', 'false');
-                // IMPORTANT: Audio is NOT stopped here, matching your friend's logic.
-                // It continues until another marker is found and triggers stopAllSounds().
+            // Keep your original logic: stop sound and hide GIF when marker is lost
+            m.markerEl.addEventListener('markerLost', () => {
+                m.posterEl.setAttribute('visible', 'false');
+                if (m.soundComp.isPlaying) {
+                    m.soundComp.stopSound();
+                }
             });
         });
 
-        /* iOS unlock functionality */
+        /* iOS/Mobile Unlock (using the general HTML5 Audio click handler as a fallback) */
         unlockBtn.addEventListener('click', () => {
-            if (currentSoundComponent) {
-                currentSoundComponent.playSound();
-                unlockBtn.style.display = 'none';
-            } else {
-                // If the user taps unlock but no marker is currently visible, we can't play anything.
-                // We could prime one of the sounds, but for simplicity, we'll just wait for a marker.
-                // You might want to remove the unlock button entirely if no sound is active.
+            // Attempt to trigger playback on any stopped sound component
+            const stoppedSound = allSoundComps.find(s => !s.isPlaying);
+            if (stoppedSound) {
+                stoppedSound.playSound();
                 unlockBtn.style.display = 'none';
             }
         });
