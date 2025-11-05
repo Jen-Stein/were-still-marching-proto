@@ -248,19 +248,13 @@
       else unlockBtn.style.display = 'block';
     }
 
+  
     /* Start */
-    startBtn.addEventListener('click', async () => {
-      try {
-        await introAudio.play(); introAudio.pause(); introAudio.currentTime = 0;
-        await thembekaAudio.play(); thembekaAudio.pause(); thembekaAudio.currentTime = 0;
-        await nalediAudio.play(); nalediAudio.pause(); nalediAudio.currentTime = 0;
-        await leratoAudio.play(); leratoAudio.pause(); leratoAudio.currentTime = 0;
-        await endingAudio.play(); endingAudio.pause(); endingAudio.currentTime = 0;
-      } catch (_) { }
-      userPrimed = true;
-      startUI.style.display = 'none';
-      setTimeout(syncCanvasToVideo, 200);
-    });
+startBtn.addEventListener('click', () => {
+  userPrimed = true; // unlock audio permission
+  startUI.style.display = 'none';
+  setTimeout(syncCanvasToVideo, 200);
+});
 
     /* Event listeners for all markers */
     function setupMarker(marker, poster, audio) {
@@ -293,3 +287,4 @@
 </body>
 
 </html>
+
