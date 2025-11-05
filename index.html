@@ -4,7 +4,7 @@
 <head>
     <meta charset="utf-8" />
     <title>We’re Still Marching — AR Experience</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover" />
 
     <script src="https://aframe.io/releases/1.2.0/aframe.min.js"></script>
     <script src="https://cdn.jsdelivr.net/gh/AR-js-org/AR.js/aframe/build/aframe-ar.js"></script>
@@ -12,23 +12,42 @@
     <script src="https://unpkg.com/aframe-gif-shader/dist/aframe-gif-shader.min.js"></script>
 
     <style>
-        /* SIZING FIX: Minimalist CSS for reliable fullscreen camera */
         html,
         body {
-            height: 100%;
             margin: 0;
-            overflow: hidden;
-            font-family: Arial, sans-serif;
-            background: #000;
-        }
-
-        /* AR.js/A-Frame elements take up the whole screen without complex positioning */
-        a-scene {
+            padding: 0;
             width: 100%;
             height: 100%;
+            overflow: hidden;
+            background: #000;
+            font-family: Arial, sans-serif;
         }
 
-        /* Start overlay */
+        /* 🌟 iOS BLACK SCREEN FIX 🌟 */
+        /* Force the video element to cover the screen (CRITICAL for iOS Safari) */
+        video#arjs-video,
+        video.arjs-video {
+            position: fixed !important; /* Fixed ensures it stays put regardless of scroll */
+            top: 0 !important;
+            left: 0 !important;
+            width: 100% !important;
+            height: 100% !important;
+            object-fit: cover !important; /* Ensures fill without stretching */
+            background: #000 !important;
+            z-index: 0 !important;
+        }
+
+        /* Canvas overlay */
+        a-scene {
+            position: absolute !important;
+            top: 0 !important;
+            left: 0 !important;
+            width: 100% !important;
+            height: 100% !important;
+            z-index: 1 !important;
+        }
+
+        /* Start overlay (kept your original styling) */
         #start {
             position: fixed;
             inset: 0;
@@ -83,7 +102,7 @@
     <button id="soundUnlock">Tap to enable sound</button>
 
     <a-scene embedded vr-mode-ui="enabled:false" renderer="alpha:true; antialias:true"
-        arjs="sourceType: webcam; debugUIEnabled:false; sourceWidth:640; sourceHeight:480;" loading-screen="enabled:false">
+        arjs="sourceType: webcam; debugUIEnabled:false;" loading-screen="enabled:false">
 
         <a-assets timeout="1">
             <img id="introPosterImg" src="assets/intro-poster.png" crossorigin="anonymous">
@@ -161,8 +180,8 @@
         ].map(data => ({
             markerEl: document.getElementById(data.marker),
             posterEl: document.getElementById(data.poster),
-            audioEl: document.getElementById(data.audioAsset), // Original HTML5 Audio tag
-            soundComp: document.getElementById(data.soundComponent).components.sound // A-Frame Sound component
+            audioEl: document.getElementById(data.audioAsset),
+            soundComp: document.getElementById(data.soundComponent).components.sound
         }));
 
         const allSoundComps = markersData.map(m => m.soundComp);
@@ -194,9 +213,9 @@
             }
         }
 
-        /* Start Button */
+        /* Start Button - CRITICAL for iOS Media Unlock */
         startBtn.addEventListener('click', () => {
-            // CRITICAL for iOS media unlock: attempt to play/pause HTML5 audio elements
+            // Attempt to play/pause HTML5 audio elements to satisfy iOS media requirements
             markersData.forEach(m => {
                 try { m.audioEl.play(); m.audioEl.pause(); m.audioEl.currentTime = 0; } catch (_) { }
             });
