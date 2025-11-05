@@ -175,127 +175,146 @@
         <a-entity camera></a-entity>
     </a-scene>
 
-    <script>
-        const arScene = document.getElementById('arScene');
-        const startUI = document.getElementById('start');
-        const startBtn = document.getElementById('startBtn');
-        const unlockBtn = document.getElementById('soundUnlock');
+   <script>
+    const arScene = document.getElementById('arScene');
+    const startUI = document.getElementById('start');
+    const startBtn = document.getElementById('startBtn');
+    const unlockBtn = document.getElementById('soundUnlock');
 
-        let markersData = [];
-        let allSoundComps = [];
-        let userPrimed = false;
+    let markersData = [];
+    let allSoundComps = [];
+    let userPrimed = false;
 
-        // --- Core Data Definitions ---
-        const MARKER_CONFIG = [
-            { marker: 'introMarker', poster: 'introPoster', audioAsset: 'introAudio', soundComponent: 'introSoundComponent' },
-            { marker: 'thembekaMarker', poster: 'thembekaPoster', audioAsset: 'thembekaAudio', soundComponent: 'thembekaSoundComponent' },
-            { marker: 'nalediMarker', poster: 'nalediPoster', audioAsset: 'nalediAudio', soundComponent: 'nalediSoundComponent' },
-            { marker: 'leratoMarker', poster: 'leratoPoster', audioAsset: 'leratoAudio', soundComponent: 'leratoSoundComponent' },
-            { marker: 'exitMarker', poster: 'exitPoster', audioAsset: 'endingAudio', soundComponent: 'endingSoundComponent' },
-        ];
+    // --- Core Data Definitions ---
+    const MARKER_CONFIG = [
+        { marker: 'introMarker', poster: 'introPoster', audioAsset: 'introAudio', soundComponent: 'introSoundComponent' },
+        { marker: 'thembekaMarker', poster: 'thembekaPoster', audioAsset: 'thembekaAudio', soundComponent: 'thembekaSoundComponent' },
+        { marker: 'nalediMarker', poster: 'nalediPoster', audioAsset: 'nalediAudio', soundComponent: 'nalediSoundComponent' },
+        { marker: 'leratoMarker', poster: 'leratoPoster', audioAsset: 'leratoAudio', soundComponent: 'leratoSoundComponent' },
+        { marker: 'exitMarker', poster: 'exitPoster', audioAsset: 'endingAudio', soundComponent: 'endingSoundComponent' },
+    ];
 
-        // --- A-Frame Initialization Logic ---
-        arScene.addEventListener('loaded', () => {
-            // 🌟 CRITICAL FIX: Retrieve the A-Frame sound components ONLY after the scene is loaded.
-            markersData = MARKER_CONFIG.map(data => ({
-                markerEl: document.getElementById(data.marker),
-                posterEl: document.getElementById(data.poster),
-                audioEl: document.getElementById(data.audioAsset), // Raw HTML Audio for priming
-                // Retrieve the A-Frame Sound component object
-                soundComp: document.getElementById(data.soundComponent)?.components?.sound
-            })).filter(data => data.soundComp); // Filter out any that failed to retrieve
+    // --- 🌟 CRITICAL FIX: Unlock Web Audio Context on user gesture 🌟 ---
+    function unlockAudioContext() {
+        const AudioContext = window.AudioContext || window.webkitAudioContext;
+        if (AudioContext) {
+            const context = new AudioContext();
+            if (context.state === 'suspended') {
+                context.resume().then(() => {
+                    console.log('Web Audio Context resumed successfully.');
+                }).catch(e => console.error('Error resuming audio context:', e));
+            }
+        }
+    }
 
-            allSoundComps = markersData.map(m => m.soundComp);
-            
-            // Set up marker event listeners after components are mapped
-            markersData.forEach(setupMarker);
+    // --- A-Frame Initialization Logic ---
+    arScene.addEventListener('loaded', () => {
+        // Retrieve the A-Frame sound components ONLY after the scene is loaded.
+        markersData = MARKER_CONFIG.map(data => ({
+            markerEl: document.getElementById(data.marker),
+            posterEl: document.getElementById(data.poster),
+            audioEl: document.getElementById(data.audioAsset), // Raw HTML Audio for priming
+            soundComp: document.getElementById(data.soundComponent)?.components?.sound
+        })).filter(data => data.soundComp);
+
+        allSoundComps = markersData.map(m => m.soundComp);
+
+        // Set up marker event listeners after components are mapped
+        markersData.forEach(setupMarker);
+    });
+
+    // --- Utility Functions ---
+
+    /* Canvas Sync (Kept for reliable sizing on iOS/mobile) */
+    function syncCanvasToVideo() {
+        const v = document.querySelector('video#arjs-video, video.arjs-video');
+        const c = document.querySelector('canvas.a-canvas');
+        if (!v || !c) return;
+        const r = v.getBoundingClientRect();
+        c.style.top = r.top + 'px';
+        c.style.left = r.left + 'px';
+        c.style.width = r.width + 'px';
+        c.style.height = r.height + 'px';
+    }
+    const bootSync = setInterval(syncCanvasToVideo, 100);
+    setTimeout(() => clearInterval(bootSync), 4000);
+    window.addEventListener('resize', syncCanvasToVideo);
+    window.addEventListener('orientationchange', () => setTimeout(syncCanvasToVideo, 300));
+
+    /* Helpers */
+    function hideAllPosters() {
+        markersData.forEach(m => m.posterEl.setAttribute('visible', 'false'));
+    }
+
+    /* Use A-Frame sound methods (.playSound(), .stopSound()) */
+    function playOnly(targetSoundComp) {
+        // Stop all sounds first
+        allSoundComps.forEach(s => {
+            if (s.isPlaying) {
+                s.stopSound();
+            }
         });
-        
-        // --- Utility Functions ---
-
-        /* Canvas Sync (Kept for reliable sizing on iOS/mobile) */
-        function syncCanvasToVideo() {
-            const v = document.querySelector('video#arjs-video, video.arjs-video');
-            const c = document.querySelector('canvas.a-canvas');
-            if (!v || !c) return;
-            const r = v.getBoundingClientRect();
-            c.style.top = r.top + 'px';
-            c.style.left = r.left + 'px';
-            c.style.width = r.width + 'px';
-            c.style.height = r.height + 'px';
-        }
-        const bootSync = setInterval(syncCanvasToVideo, 100);
-        setTimeout(() => clearInterval(bootSync), 4000);
-        window.addEventListener('resize', syncCanvasToVideo);
-        window.addEventListener('orientationchange', () => setTimeout(syncCanvasToVideo, 300));
-
-        /* Helpers */
-        function hideAllPosters() {
-            markersData.forEach(m => m.posterEl.setAttribute('visible', 'false'));
-        }
-
-        /* FIX: Use A-Frame sound methods (.playSound(), .stopSound()) */
-        function playOnly(targetSoundComp) {
-            // Stop all sounds first
-            allSoundComps.forEach(s => {
-                if (s.isPlaying) {
-                    s.stopSound();
-                }
-            });
-            // Try to play the new sound using A-Frame
-            try {
-                if (userPrimed) {
-                    targetSoundComp.playSound();
-                    unlockBtn.style.display = 'none';
-                } else {
-                    unlockBtn.style.display = 'block';
-                }
-            } catch (e) {
-                console.error("Error playing A-Frame sound component:", e);
+        // Try to play the new sound using A-Frame
+        try {
+            if (userPrimed) {
+                targetSoundComp.playSound();
+                unlockBtn.style.display = 'none';
+            } else {
                 unlockBtn.style.display = 'block';
             }
+        } catch (e) {
+            console.error("Error playing A-Frame sound component:", e);
+            unlockBtn.style.display = 'block';
         }
+    }
 
-        /* --- Event Handlers --- */
+    /* --- Event Handlers --- */
 
-        /* Start Button - CRITICAL for iOS Media Unlock */
-        startBtn.addEventListener('click', async () => {
-            // 🌟 CRITICAL FIX: Prime the raw HTML5 audio elements to unlock playback permission
-            markersData.forEach(m => {
-                try { m.audioEl.play(); m.audioEl.pause(); m.audioEl.currentTime = 0; } catch (_) { }
-            });
-
-            userPrimed = true;
-            startUI.style.display = 'none';
-            setTimeout(syncCanvasToVideo, 200);
+    /* Start Button - CRITICAL for iOS Media Unlock */
+    startBtn.addEventListener('click', async () => {
+        // 1. Force Web Audio Context Unlock
+        unlockAudioContext();
+        
+        // 2. Prime raw HTML5 audio elements for general media permission
+        markersData.forEach(m => {
+            try { m.audioEl.play(); m.audioEl.pause(); m.audioEl.currentTime = 0; } catch (_) { }
         });
 
-        /* Event listeners for all markers */
-        function setupMarker(data) {
-            data.markerEl.addEventListener('markerFound', () => {
-                hideAllPosters();
-                data.posterEl.setAttribute('visible', 'true');
-                playOnly(data.soundComp); // Play the A-Frame sound component
-            });
+        userPrimed = true;
+        startUI.style.display = 'none';
+        setTimeout(syncCanvasToVideo, 200);
+    });
 
-            data.markerEl.addEventListener('markerLost', () => {
-                data.posterEl.setAttribute('visible', 'false');
-                if (data.soundComp.isPlaying) {
-                    data.soundComp.stopSound(); // Stop the A-Frame sound component
-                }
-            });
-        }
+    /* Event listeners for all markers */
+    function setupMarker(data) {
+        data.markerEl.addEventListener('markerFound', () => {
+            hideAllPosters();
+            data.posterEl.setAttribute('visible', 'true');
+            playOnly(data.soundComp); // Play the A-Frame sound component
+        });
 
-        /* iOS unlock (Tap to enable sound) */
-        unlockBtn.addEventListener('click', () => {
-            // Find a sound component that is loaded but not playing and try to play it
-            const stoppedSound = allSoundComps.find(s => s.pool.length > 0 && !s.isPlaying);
-            if (stoppedSound) {
-                stoppedSound.playSound();
-                unlockBtn.style.display = 'none';
+        data.markerEl.addEventListener('markerLost', () => {
+            data.posterEl.setAttribute('visible', 'false');
+            if (data.soundComp.isPlaying) {
+                data.soundComp.stopSound(); // Stop the A-Frame sound component
             }
         });
-    </script>
+    }
+
+    /* iOS unlock (Tap to enable sound) */
+    unlockBtn.addEventListener('click', () => {
+        // 1. Re-attempt Web Audio Context Unlock
+        unlockAudioContext();
+
+        // 2. Find and play a stopped sound component
+        const stoppedSound = allSoundComps.find(s => s.pool.length > 0 && !s.isPlaying);
+        if (stoppedSound) {
+            stoppedSound.playSound();
+            unlockBtn.style.display = 'none';
+        }
+    });
+</script>
 </body>
 
 </html>
+
