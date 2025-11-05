@@ -83,7 +83,7 @@
     <button id="soundUnlock">Tap to enable sound</button>
 
     <a-scene embedded vr-mode-ui="enabled:false" renderer="alpha:true; antialias:true"
-    arjs="sourceType: webcam; debugUIEnabled:false;" loading-screen="enabled:false">
+        arjs="sourceType: webcam; debugUIEnabled:false; sourceWidth:640; sourceHeight:480;" loading-screen="enabled:false">
 
         <a-assets timeout="1">
             <img id="introPosterImg" src="assets/intro-poster.png" crossorigin="anonymous">
@@ -120,7 +120,7 @@
 
         <a-marker id="nalediMarker" type="pattern" url="assets/pattern-circle.patt" emitevents="true">
             <a-plane id="nalediPoster" position="0 2.1 0" rotation="0 0 0" width="3.2" height="4.2"
-                material="shader: gif; src: #nalediGif; transparent: true; alphaTest: 0.6; depthWrite: false"
+                material="shader: gif; src: #nalediGif; transparent: true; alphaTest: 0.01; depthWrite: false"
                 visible="false"></a-plane>
             <a-entity light="type: ambient; intensity: 1"></a-entity>
             <a-entity light="type: directional; intensity: 0.6" position="1 2 1"></a-entity>
@@ -175,34 +175,28 @@
 
         /* Helper to stop all A-Frame sounds, then play the target sound */
         function playOnly(targetSoundComp) {
-            // Stop all sounds first
             allSoundComps.forEach(s => {
                 if (s.isPlaying) {
                     s.stopSound();
                 }
             });
 
-            // Try to play the new sound
             try {
                 if (userPrimed) {
-                    // This attempt will fail without user interaction if not primed, but it's the right A-Frame call
                     targetSoundComp.playSound();
                     unlockBtn.style.display = 'none';
                 } else {
-                    // If not primed, user needs to interact
                     unlockBtn.style.display = 'block';
                 }
             } catch (e) {
                 console.error("Error playing sound component:", e);
-                // Fallback: display unlock button if A-Frame playSound fails
                 unlockBtn.style.display = 'block';
             }
         }
 
         /* Start Button */
         startBtn.addEventListener('click', () => {
-            // Important: Attempt to play/pause the actual HTML5 audio tags to satisfy
-            // mobile browser requirements for user-initiated media playback.
+            // CRITICAL for iOS media unlock: attempt to play/pause HTML5 audio elements
             markersData.forEach(m => {
                 try { m.audioEl.play(); m.audioEl.pause(); m.audioEl.currentTime = 0; } catch (_) { }
             });
@@ -215,7 +209,6 @@
         markersData.forEach(m => {
             m.markerEl.addEventListener('markerFound', () => {
                 hideAllPosters();
-                // Ensure the gif-shader has a frame to display immediately on visible=true
                 m.posterEl.setAttribute('visible', 'true');
                 playOnly(m.soundComp);
             });
@@ -230,7 +223,6 @@
 
         /* iOS/Mobile Unlock */
         unlockBtn.addEventListener('click', () => {
-            // Attempt to trigger playback on any stopped A-Frame sound component
             const stoppedSound = allSoundComps.find(s => !s.isPlaying);
             if (stoppedSound) {
                 stoppedSound.playSound();
@@ -241,4 +233,3 @@
 </body>
 
 </html>
-
