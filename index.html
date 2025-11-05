@@ -13,125 +13,83 @@
   <script src="https://unpkg.com/aframe-gif-shader/dist/aframe-gif-shader.min.js"></script>
 
   <style>
-  html,
-  body {
-    margin: 0;
-    padding: 0;
-    width: 100%;
-    height: 100%;
-    overflow: hidden;
-    background: #000;
-    font-family: Arial, sans-serif;
-    position: fixed;
-  }
+    html, body {
+      margin: 0; padding: 0; width: 100%; height: 100%;
+      overflow: hidden; background: #000; font-family: Arial, sans-serif;
+      position: fixed;
+    }
 
-  /* Camera feed fills screen - FIXED */
-  video#arjs-video,
-  video.arjs-video {
-    position: absolute !important;
-    top: 0 !important;
-    left: 0 !important;
-    width: 100% !important;
-    height: 100% !important;
-    object-fit: cover !important;
-    background: #000 !important;
-    z-index: 0 !important;
-  }
+    /* Camera feed fills screen - FIXED */
+    video#arjs-video, video.arjs-video {
+      position: absolute !important;
+      top: 0 !important; left: 0 !important;
+      width: 100% !important; height: 100% !important;
+      object-fit: cover !important;
+      background: #000 !important;
+      z-index: 0 !important;
+    }
 
-  /* Canvas overlay - FIXED */
-  a-scene {
-    position: absolute !important;
-    top: 0 !important;
-    left: 0 !important;
-    width: 100% !important;
-    height: 100% !important;
-    z-index: 1 !important;
-  }
+    /* Canvas overlay - FIXED */
+    a-scene {
+      position: absolute !important;
+      top: 0 !important; left: 0 !important;
+      width: 100% !important; height: 100% !important;
+      z-index: 1 !important;
+    }
 
-  .a-canvas,
-  canvas.a-canvas {
-    position: absolute !important;
-    top: 0 !important;
-    left: 0 !important;
-    width: 100% !important;
-    height: 100% !important;
-    background: transparent !important;
-  }
+    .a-canvas, canvas.a-canvas {
+      position: absolute !important;
+      top: 0 !important; left: 0 !important;
+      width: 100% !important; height: 100% !important;
+      background: transparent !important;
+    }
 
-  /* Start overlay */
-  #start {
-    position: fixed;
-    inset: 0;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    background: rgba(0, 0, 0, .9);
-    color: #fff;
-    z-index: 3;
-    text-align: center;
-    padding: 24px;
-  }
+    /* Start overlay */
+    #start{
+      position: fixed; inset: 0;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      background: rgba(0,0,0,.9); color:#fff; z-index:3; text-align:center; padding:24px;
+    }
+    #start button{
+      margin-top:12px; padding:12px 18px; font-size:16px;
+      border-radius:8px; border:0; background:#ff6b6b; color:#fff; cursor:pointer;
+    }
 
-  #start button {
-    margin-top: 12px;
-    padding: 12px 18px;
-    font-size: 16px;
-    border-radius: 8px;
-    border: 0;
-    background: #ff6b6b;
-    color: #fff;
-    cursor: pointer;
-  }
-
-  #soundUnlock {
-    position: fixed;
-    bottom: 14px;
-    left: 50%;
-    transform: translateX(-50%);
-    z-index: 3;
-    background: rgba(0, 0, 0, .7);
-    color: #fff;
-    border: 1px solid #fff;
-    padding: 10px 14px;
-    border-radius: 8px;
-    font-size: 14px;
-    display: none;
-  }
-
-  #start h2 { margin-bottom: 8px; }
-  #start p { margin: 8px 0; line-height: 1.4; }
-  #start .onboard-steps { 
-    text-align: left; 
-    margin: 12px 0; 
-    padding-left: 20px; 
-  }
-  #start .onboard-steps li { margin: 6px 0; }
-  #start .tips { font-size: 0.95rem; opacity: 0.9; }
-</style>
-
+    #soundUnlock{
+      position: fixed; bottom:14px; left:50%; transform:translateX(-50%);
+      z-index:3; background:rgba(0,0,0,.7); color:#fff; border:1px solid #fff;
+      padding:10px 14px; border-radius:8px; font-size:14px; display:none;
+    }
+  </style>
 </head>
 <body>
 
-  <div id="start">
-    <h2>We’re Still Marching - AR Prototype</h2>
-     <p id="startHowTo">
+  <div id="start" role="dialog" aria-labelledby="startTitle" aria-describedby="startHowTo">
+  <h2 id="startTitle">We’re Still Marching — AR Prototype</h2>
+
+  <p id="startHowTo">
     This experience uses your camera and plays short audio stories when you scan printed markers.
   </p>
-    <ul class="onboard-steps">
-  <li><strong>Start</strong> and allow camera</li>
-  <li><strong>Start walking</strong> straight on the grass</li>
-  <li><strong>Hold steady</strong> 20–40 cm from marker</li>
-  <li><strong>Scan the printed markers in order:</strong> Kanji → Hiro → i → Triangle → T</li>
-  <li>Use <strong>headphones</strong> for clear audio</li>
-</ul>
-  </div>
+
+  <ol class="onboard-steps">
+    <li><strong>Find good light.</strong> Avoid glare and very dark areas.</li>
+    <li><strong>Tap “Start”</strong> and <strong>allow camera access</strong> when asked.</li>
+    <li><strong>Hold your phone steady</strong> 20–40&nbsp;cm from each marker until the image appears and audio starts.</li>
+    <li><strong>Scan the markers in order:</strong> Kanji → Hiro → Circle → Triangle → T.</li>
+    <li><strong>Move to the next marker</strong> when the current story ends.</li>
+  </ol>
+
+  <p class="tips">
+    Tip: Use headphones for clearer audio. If nothing plays, lower your phone slightly or step back.
+  </p>
+
+  <button id="startBtn" aria-label="Start the AR experience">Start</button>
+</div>
 
   <button id="soundUnlock">Tap to enable sound</button>
 
   <a-scene embedded vr-mode-ui="enabled:false" renderer="alpha:true; antialias:true"
            arjs="sourceType: webcam; debugUIEnabled:false" loading-screen="enabled:false">
-    
 
     <a-assets timeout="1">
       <!-- INTRO stop assets -->
@@ -196,7 +154,7 @@
 
     <a-entity camera></a-entity>
   </a-scene>
-  
+
   <script>
     const startUI   = document.getElementById('start');
     const startBtn  = document.getElementById('startBtn');
@@ -330,9 +288,3 @@
   </script>
 </body>
 </html>
-
-
-
-
-
-
