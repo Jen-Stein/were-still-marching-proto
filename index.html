@@ -50,6 +50,11 @@
       display: flex; flex-direction: column; align-items: center; justify-content: center;
       background: rgba(0,0,0,.9); color:#fff; z-index:3; text-align:center; padding:24px;
     }
+
+    /* Make sure the overlay can be clicked */
+#start { pointer-events: auto; }
+a-scene, .a-canvas, canvas.a-canvas { pointer-events: none; }
+
     #start button{
       margin-top:12px; padding:12px 18px; font-size:16px;
       border-radius:8px; border:0; background:#ff6b6b; color:#fff; cursor:pointer;
@@ -152,137 +157,95 @@
     <a-entity camera></a-entity>
   </a-scene>
 
-  <script>
-    const startUI = document.getElementById('start');
-    const startBtn = document.getElementById('startBtn');
-    const unlockBtn = document.getElementById('soundUnlock');
+ <script>
+  const startUI = document.getElementById('start');
+  const startBtn = document.getElementById('startBtn');
+  const unlockBtn = document.getElementById('soundUnlock');  // keep ONLY this one
 
-    // INTRO
-    const introMarker = document.getElementById('introMarker');
-    const introPoster = document.getElementById('introPoster');
-    const introAudio = document.getElementById('introAudio');
+  // ... rest of your variables stay the same ...
 
-    // THEMBEKA
-    const thembekaMarker = document.getElementById('thembekaMarker');
-    const thembekaPoster = document.getElementById('thembekaPoster');
-    const thembekaAudio = document.getElementById('thembekaAudio');
+  let userPrimed = false;
+  let audioCtx = null;
 
-    // NALEDI
-    const nalediMarker = document.getElementById('nalediMarker');
-    const nalediPoster = document.getElementById('nalediPoster');
-    const nalediAudio = document.getElementById('nalediAudio');
+  // Make sure nothing plays on load
+  [introAudio, thembekaAudio, nalediAudio, leratoAudio, endingAudio].forEach(a=>{
+    try { a.pause(); a.currentTime = 0; } catch(_) {}
+  });
 
-    // LERATO
-    const leratoMarker = document.getElementById('leratoMarker');
-    const leratoPoster = document.getElementById('leratoPoster');
-    const leratoAudio = document.getElementById('leratoAudio');
+  // syncCanvasToVideo() ... (unchanged)
 
-    // EXIT
-    const exitMarker = document.getElementById('exitMarker');
-    const exitPoster = document.getElementById('exitPoster');
-    const endingAudio = document.getElementById('endingAudio');
+  function hideAllPosters() {
+    introPoster.setAttribute('visible', 'false');
+    thembekaPoster.setAttribute('visible', 'false');
+    nalediPoster.setAttribute('visible', 'false');
+    leratoPoster.setAttribute('visible', 'false');
+    exitPoster.setAttribute('visible', 'false');
+  }
 
-    let userPrimed = false;
-    let audioCtx = null;
-
-    // Make sure nothing plays on load
+  function playOnly(audioEl) {
     [introAudio, thembekaAudio, nalediAudio, leratoAudio, endingAudio].forEach(a=>{
       try { a.pause(); a.currentTime = 0; } catch(_) {}
     });
 
-    /* Sync canvas */
-    function syncCanvasToVideo() {
-      const v = document.querySelector('video#arjs-video, video.arjs-video');
-      const c = document.querySelector('canvas.a-canvas');
-      if (!v || !c) return;
-      const r = v.getBoundingClientRect();
-      c.style.top = r.top + 'px';
-      c.style.left = r.left + 'px';
-      c.style.width = r.width + 'px';
-      c.style.height = r.height + 'px';
-    }
-    const bootSync = setInterval(syncCanvasToVideo, 100);
-    setTimeout(() => clearInterval(bootSync), 4000);
-    window.addEventListener('resize', syncCanvasToVideo);
-    window.addEventListener('orientationchange', () => setTimeout(syncCanvasToVideo, 300));
-
-    /* Helpers */
-    function hideAllPosters() {
-      introPoster.setAttribute('visible', 'false');
-      thembekaPoster.setAttribute('visible', 'false');
-      nalediPoster.setAttribute('visible', 'false');
-      leratoPoster.setAttribute('visible', 'false');
-      exitPoster.setAttribute('visible', 'false');
-    }
-
-    function playOnly(audioEl) {
-      // Pause everything else
-      [introAudio, thembekaAudio, nalediAudio, leratoAudio, endingAudio].forEach(a=>{
-        try { a.pause(); a.currentTime = 0; } catch(_) {}
+    const tryPlay = () => {
+      audioEl.play().catch(() => {
+        unlockBtn.style.display = 'block';
       });
+    };
 
-      // Ensure audio context is resumed before trying to play
-      const tryPlay = () => {
-        audioEl.play().catch(() => {
-          // If blocked, show manual unlock
-          unlockBtn.style.display = 'block';
-        });
-      };
+    if (audioCtx && audioCtx.state === 'suspended') {
+      audioCtx.resume().then(tryPlay).catch(tryPlay);
+    } else {
+      tryPlay();
+    }
+  }
 
-      if (audioCtx && audioCtx.state === 'suspended') {
-        audioCtx.resume().then(tryPlay).catch(tryPlay);
+  // Start — only unlock audio context, DO NOT play any track
+  startBtn.addEventListener('click', () => {
+    if (!audioCtx) {
+      audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    }
+    if (audioCtx.state === 'suspended') {
+      audioCtx.resume().catch(()=>{});
+    }
+    userPrimed = true;
+    startUI.style.display = 'none';
+    setTimeout(syncCanvasToVideo, 200);
+  });
+
+  function setupMarker(marker, poster, audio) {
+    marker.addEventListener('markerFound', () => {
+      hideAllPosters();
+      poster.setAttribute('visible', 'true');
+      if (userPrimed) {
+        playOnly(audio);
       } else {
-        tryPlay();
+        unlockBtn.style.display = 'block';
       }
-    }
-
-    /* Start — only unlock audio context, do NOT play any tracks */
-    startBtn.addEventListener('click', () => {
-      if (!audioCtx) {
-        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-      }
-      if (audioCtx.state === 'suspended') {
-        audioCtx.resume().catch(()=>{});
-      }
-      userPrimed = true;
-      startUI.style.display = 'none';
-      setTimeout(syncCanvasToVideo, 200);
     });
-
-    /* Event listeners for all markers */
-    function setupMarker(marker, poster, audio) {
-      marker.addEventListener('markerFound', () => {
-        hideAllPosters();
-        poster.setAttribute('visible', 'true');
-        if (userPrimed) {
-          playOnly(audio);
-        } else {
-          // If somehow found before Start, prompt to unlock
-          unlockBtn.style.display = 'block';
-        }
-      });
-      marker.addEventListener('markerLost', () => {
-        poster.setAttribute('visible', 'false');
-        try { audio.pause(); audio.currentTime = 0; } catch(_) {}
-      });
-    }
-
-    setupMarker(introMarker, introPoster, introAudio);
-    setupMarker(thembekaMarker,thembekaPoster,thembekaAudio);
-    setupMarker(nalediMarker, nalediPoster, nalediAudio);
-    setupMarker(leratoMarker, leratoPoster, leratoAudio);
-    setupMarker(exitMarker, exitPoster, endingAudio);
-
-    /* Manual unlock button resumes the shared audio context */
-    const unlockBtn = document.getElementById('soundUnlock');
-    unlockBtn.addEventListener('click', () => {
-      if (!audioCtx) {
-        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-      }
-      audioCtx.resume()
-        .then(() => { unlockBtn.style.display = 'none'; userPrimed = true; })
-        .catch(() => {});
+    marker.addEventListener('markerLost', () => {
+      poster.setAttribute('visible', 'false');
+      try { audio.pause(); audio.currentTime = 0; } catch(_) {}
     });
-  </script>
+  }
+
+  setupMarker(introMarker, introPoster, introAudio);
+  setupMarker(thembekaMarker,thembekaPoster,thembekaAudio);
+  setupMarker(nalediMarker,  nalediPoster,  nalediAudio);
+  setupMarker(leratoMarker,  leratoPoster,  leratoAudio);
+  setupMarker(exitMarker,    exitPoster,    endingAudio);
+
+  // Manual unlock button uses the SAME unlockBtn (no re-declare)
+  unlockBtn.addEventListener('click', () => {
+    if (!audioCtx) {
+      audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    }
+    audioCtx.resume()
+      .then(() => { unlockBtn.style.display = 'none'; userPrimed = true; })
+      .catch(() => {});
+  });
+</script>
+
 </body>
 </html>
+
