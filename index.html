@@ -5,10 +5,12 @@
   <title>We’re Still Marching</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover" />
 
-    <script src="https://aframe.io/releases/1.2.0/aframe.min.js"></script>
+  <!-- A-Frame & AR.js -->
+  <script src="https://aframe.io/releases/1.2.0/aframe.min.js"></script>
   <script src="https://cdn.jsdelivr.net/gh/AR-js-org/AR.js/aframe/build/aframe-ar.js"></script>
 
-    <script src="https://unpkg.com/aframe-gif-shader/dist/aframe-gif-shader.min.js"></script>
+  <!-- GIF shader (for transparent GIFs) -->
+  <script src="https://unpkg.com/aframe-gif-shader/dist/aframe-gif-shader.min.js"></script>
 
   <style>
     html, body {
@@ -53,7 +55,11 @@
       border-radius:8px; border:0; background:#ff6b6b; color:#fff; cursor:pointer;
     }
 
-    /* REMOVED #soundUnlock styling since the button is removed from HTML */
+    #soundUnlock{
+      position: fixed; bottom:14px; left:50%; transform:translateX(-50%);
+      z-index:3; background:rgba(0,0,0,.7); color:#fff; border:1px solid #fff;
+      padding:10px 14px; border-radius:8px; font-size:14px; display:none;
+    }
   </style>
 </head>
 <body>
@@ -79,41 +85,50 @@
   <button id="startBtn" aria-label="Start the AR experience">Start</button>
 </div>
 
-    <a-scene embedded vr-mode-ui="enabled:false" renderer="alpha:true; antialias:true"
+  <button id="soundUnlock">Tap to enable sound</button>
+
+  <a-scene embedded vr-mode-ui="enabled:false" renderer="alpha:true; antialias:true"
            arjs="sourceType: webcam; debugUIEnabled:false" loading-screen="enabled:false">
 
     <a-assets timeout="1">
-            <img id="introPosterImg" src="assets/intro-poster.png" crossorigin="anonymous">
+      <!-- INTRO stop assets -->
+      <img id="introPosterImg" src="assets/intro-poster.png" crossorigin="anonymous">
       <audio id="introAudio" src="assets/intro_audio.mp3" preload="auto" playsinline webkit-playsinline></audio>
 
+      <!-- THEMBEKA stop assets -->
       <img id="thembekaGif" src="assets/thembeka_small.gif" crossorigin="anonymous">
       <audio id="thembekaAudio" src="assets/thembeka_audio.mp3" preload="auto" playsinline webkit-playsinline></audio>
 
+      <!-- NALEDI stop assets -->
       <img id="nalediGif" src="assets/naledi_final.gif" crossorigin="anonymous">
       <audio id="nalediAudio" src="assets/naledi_audio.mp3" preload="auto" playsinline webkit-playsinline></audio>
 
+      <!-- LERATO stop assets -->
       <img id="leratoGif" src="assets/Lerato.gif" crossorigin="anonymous">
       <audio id="leratoAudio" src="assets/lerato_audio.mp3" preload="auto" playsinline webkit-playsinline></audio>
 
+      <!-- EXIT stop assets -->
       <img id="exitPosterImg" src="assets/exit-poster.png" crossorigin="anonymous">
       <audio id="endingAudio" src="assets/ending_audio.mp3" preload="auto" playsinline webkit-playsinline></audio>
     </a-assets>
 
-        
-        <a-marker id="introMarker" preset="kanji" emitevents="true">
+    <!-- ===== INTRO (KANJI) ===== -->
+    <a-marker id="introMarker" preset="kanji" emitevents="true">
       <a-image id="introPoster" src="#introPosterImg" position="0 1.2 0" rotation="0 0 0" width="3.7" height="2" visible="false"></a-image>
       <a-entity light="type: ambient; intensity: 1"></a-entity>
       <a-entity light="type: directional; intensity: 0.6" position="1 2 1"></a-entity>
     </a-marker>
 
-        <a-marker id="thembekaMarker" preset="hiro" emitevents="true">
+    <!-- ===== THEMBEKA (HIRO) ===== -->
+    <a-marker id="thembekaMarker" preset="hiro" emitevents="true">
       <a-plane id="thembekaPoster" position="0 2 0" rotation="0 0 0" width="3.2" height="4.2"
                material="shader: gif; src: #thembekaGif; transparent: true; alphaTest: 0.01" visible="false"></a-plane>
       <a-entity light="type: ambient; intensity: 1"></a-entity>
       <a-entity light="type: directional; intensity: 0.6" position="1 2 1"></a-entity>
     </a-marker>
 
-        <a-marker id="nalediMarker" type="pattern" url="assets/pattern-i.patt" emitevents="true">
+    <!-- ===== NALEDI (i marker pattern) ===== -->
+    <a-marker id="nalediMarker" type="pattern" url="assets/pattern-i.patt" emitevents="true">
       <a-plane id="nalediPoster" position="0 2 0" rotation="0 0 0" width="3.2" height="4.2"
                material="shader: gif; src: #nalediGif; transparent: true; alphaTest: 0.6; depthWrite: false"
                visible="false"></a-plane>
@@ -121,14 +136,16 @@
       <a-entity light="type: directional; intensity: 0.6" position="1 2 1"></a-entity>
     </a-marker>
 
-        <a-marker id="leratoMarker" type="pattern" url="assets/pattern-triangle.patt" emitevents="true">
+    <!-- ===== LERATO (TRIANGLE pattern) ===== -->
+    <a-marker id="leratoMarker" type="pattern" url="assets/pattern-triangle.patt" emitevents="true">
       <a-plane id="leratoPoster" position="0 2 0" rotation="0 0 0" width="3.2" height="4.2"
                material="shader: gif; src: #leratoGif; transparent: true; alphaTest: 0.01" visible="false"></a-plane>
       <a-entity light="type: ambient; intensity: 1"></a-entity>
       <a-entity light="type: directional; intensity: 0.6" position="1 2 1"></a-entity>
     </a-marker>
 
-        <a-marker id="exitMarker" type="pattern" url="assets/pattern-T_marker.patt" emitevents="true">
+    <!-- ===== EXIT (T pattern) ===== -->
+    <a-marker id="exitMarker" type="pattern" url="assets/pattern-T_marker.patt" emitevents="true">
       <a-image id="exitPoster" src="#exitPosterImg" position="0 2 0" rotation="0 0 0" width="4" height="2" visible="false"></a-image>
       <a-entity light="type: ambient; intensity: 1"></a-entity>
       <a-entity light="type: directional; intensity: 0.8" position="1 3 2"></a-entity>
@@ -140,7 +157,7 @@
   <script>
     const startUI   = document.getElementById('start');
     const startBtn  = document.getElementById('startBtn');
-    // REMOVED: const unlockBtn = document.getElementById('soundUnlock');
+    const unlockBtn = document.getElementById('soundUnlock');
 
     // INTRO
     const introMarker = document.getElementById('introMarker');
@@ -167,13 +184,11 @@
     const exitPoster  = document.getElementById('exitPoster');
     const endingAudio = document.getElementById('endingAudio');
 
-    const allAudio = [introAudio, thembekaAudio, nalediAudio, leratoAudio, endingAudio];
-
     let userPrimed = false;
     let audioCtx = null;
 
     // Make sure nothing plays on load
-    allAudio.forEach(a=>{
+    [introAudio, thembekaAudio, nalediAudio, leratoAudio, endingAudio].forEach(a=>{
       try { a.pause(); a.currentTime = 0; } catch(_) {}
     });
 
@@ -204,40 +219,33 @@
 
     function playOnly(audioEl) {
       // Pause everything else
-      allAudio.forEach(a=>{
+      [introAudio, thembekaAudio, nalediAudio, leratoAudio, endingAudio].forEach(a=>{
         try { a.pause(); a.currentTime = 0; } catch(_) {}
       });
 
-      // Try to resume context and play the audio
+      // Ensure audio context is resumed before trying to play
       const tryPlay = () => {
-        // This relies on the start button having primed the media
-        audioEl.play().catch(e => console.error("Audio playback error:", e));
+        audioEl.play().catch(() => {
+          // If blocked, show manual unlock
+          unlockBtn.style.display = 'block';
+        });
       };
 
       if (audioCtx && audioCtx.state === 'suspended') {
-        // Attempt to resume the audio context one last time
         audioCtx.resume().then(tryPlay).catch(tryPlay);
       } else {
         tryPlay();
       }
     }
 
-    /* Start Button: Single-tap to unlock all media access */
+    /* Start — only unlock audio context, do NOT play any tracks */
     startBtn.addEventListener('click', () => {
-      // 1. CRITICAL: Create/Resume Web Audio Context (A-Frame sound reliance)
       if (!audioCtx) {
         audioCtx = new (window.AudioContext || window.webkitAudioContext)();
       }
       if (audioCtx.state === 'suspended') {
         audioCtx.resume().catch(()=>{});
       }
-      
-      // 2. CRITICAL: HTML Audio Priming (general mobile media unlock)
-      allAudio.forEach(a => {
-        // Play/pause briefly to satisfy browser's 'user gesture' requirement
-        try { a.play(); a.pause(); a.currentTime = 0; } catch(_) {}
-      });
-
       userPrimed = true;
       startUI.style.display = 'none';
       setTimeout(syncCanvasToVideo, 200);
@@ -251,13 +259,10 @@
         if (userPrimed) {
           playOnly(audio);
         } else {
-          // If marker is found before the 'Start' button is pressed, hide poster and do nothing.
-          // This ensures no audio is attempted before the necessary user tap.
-          poster.setAttribute('visible', 'false'); 
-          console.log("Marker detected, but sound not unlocked yet. Tap 'Start'.");
+          // If somehow found before Start, prompt to unlock
+          unlockBtn.style.display = 'block';
         }
       });
-
       marker.addEventListener('markerLost', () => {
         poster.setAttribute('visible', 'false');
         try { audio.pause(); audio.currentTime = 0; } catch(_) {}
@@ -269,6 +274,16 @@
     setupMarker(nalediMarker,  nalediPoster,  nalediAudio);
     setupMarker(leratoMarker,  leratoPoster,  leratoAudio);
     setupMarker(exitMarker,    exitPoster,    endingAudio);
+
+    /* Manual unlock button resumes the shared audio context */
+    unlockBtn.addEventListener('click', () => {
+      if (!audioCtx) {
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      }
+      audioCtx.resume()
+        .then(() => { unlockBtn.style.display = 'none'; userPrimed = true; })
+        .catch(() => {});
+    });
   </script>
 </body>
 </html>
